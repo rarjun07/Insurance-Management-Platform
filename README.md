@@ -14,6 +14,8 @@ The platform will support:
 - Reports and dashboards
 - Role-based access for Admin, Insurance Agent, and Customer users
 
+Version one will fully implement Health Insurance. Other insurance types will be shown as coming soon.
+
 ## Backend Decision
 
 The provided project PDF suggested Flask, but the mentor approved FastAPI. This project uses FastAPI for the backend API.
