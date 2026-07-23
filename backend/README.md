@@ -28,6 +28,22 @@ alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
+## PostgreSQL Setup
+
+Create the local PostgreSQL database before running migrations:
+
+```bash
+createdb insurance_management
+```
+
+Default database URL:
+
+```text
+postgresql+psycopg://postgres:postgres@localhost:5432/insurance_management
+```
+
+If your PostgreSQL username, password, host, or port is different, update `DATABASE_URL` in `.env`.
+
 Open:
 
 - API health check: `http://127.0.0.1:8000/health`

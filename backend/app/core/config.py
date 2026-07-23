@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Insurance Management Platform"
     PROJECT_VERSION: str = "0.1.0"
     API_V1_PREFIX: str = "/api/v1"
-    DATABASE_URL: str = "sqlite:///./insurance_management.db"
+    DATABASE_URL: str = "postgresql+psycopg://postgres:postgres@localhost:5432/insurance_management"
     SECRET_KEY: str = "change-this-secret-key"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30

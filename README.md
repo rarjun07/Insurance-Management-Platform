@@ -18,6 +18,10 @@ The platform will support:
 
 The provided project PDF suggested Flask, but the mentor approved FastAPI. This project uses FastAPI for the backend API.
 
+## Database
+
+This project uses PostgreSQL with SQLAlchemy and Alembic migrations.
+
 ## Current Progress
 
 - Day 1: Requirements reviewed and backend structure created

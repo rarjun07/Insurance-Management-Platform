@@ -2,7 +2,7 @@
 
 ## Goal
 
-Create the first backend database design and authentication module using FastAPI, SQLAlchemy, Pydantic, password hashing, and JWT tokens.
+Create the first backend database design and authentication module using FastAPI, PostgreSQL, SQLAlchemy, Pydantic, password hashing, and JWT tokens.
 
 ## Database Tables Added
 
@@ -118,6 +118,7 @@ Returns the currently authenticated user from the JWT token.
 - Protected route dependency validates bearer tokens.
 - Role authorization helper is available for future modules.
 - Alembic migration setup is available for database version control.
+- PostgreSQL is configured as the project database.
 
 ## Verification
 
