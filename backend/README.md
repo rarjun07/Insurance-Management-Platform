@@ -15,6 +15,7 @@ Day 1 and Day 2 setup is complete:
 - JWT authentication endpoints
 - Password hashing
 - Alembic migration scaffolding
+- Customer Management APIs
 
 ## Run Locally
 
@@ -58,6 +59,14 @@ Open:
 - Claims: `/api/v1/claims`
 - Documents: `/api/v1/documents`
 - Reports: `/api/v1/reports`
+
+## Customer Endpoints
+
+- Create customer: `POST /api/v1/customers/`
+- List/search customers: `GET /api/v1/customers/`
+- View customer: `GET /api/v1/customers/{customer_id}`
+- Update customer: `PUT /api/v1/customers/{customer_id}`
+- Customer history: `GET /api/v1/customers/{customer_id}/history`
 
 ## Authentication Endpoints
 
