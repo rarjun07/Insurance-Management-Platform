@@ -16,6 +16,7 @@ Day 1 and Day 2 setup is complete:
 - Password hashing
 - Alembic migration scaffolding
 - Customer Management APIs
+- Health Insurance Policy Management APIs
 
 ## Run Locally
 
@@ -67,6 +68,16 @@ Open:
 - View customer: `GET /api/v1/customers/{customer_id}`
 - Update customer: `PUT /api/v1/customers/{customer_id}`
 - Customer history: `GET /api/v1/customers/{customer_id}/history`
+
+## Policy Endpoints
+
+- Create policy: `POST /api/v1/policies/`
+- List/filter policies: `GET /api/v1/policies/`
+- List active policies: `GET /api/v1/policies/active`
+- View policy: `GET /api/v1/policies/{policy_id}`
+- Update policy: `PUT /api/v1/policies/{policy_id}`
+- Renew policy: `PATCH /api/v1/policies/{policy_id}/renew`
+- Cancel policy: `PATCH /api/v1/policies/{policy_id}/cancel`
 
 ## Authentication Endpoints
 
