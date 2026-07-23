@@ -4,13 +4,17 @@ FastAPI backend for the internship Insurance Management Platform project.
 
 ## Current Status
 
-Day 1 setup is complete:
+Day 1 and Day 2 setup is complete:
 
 - FastAPI app entry point
 - Versioned API routing
 - Placeholder modules for all project areas
 - Environment-based configuration
 - SQLAlchemy database session setup
+- SQLAlchemy models for users, customers, policies, claims, premium payments, and documents
+- JWT authentication endpoints
+- Password hashing
+- Alembic migration scaffolding
 
 ## Run Locally
 
@@ -20,6 +24,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
+alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
@@ -37,3 +42,9 @@ Open:
 - Claims: `/api/v1/claims`
 - Documents: `/api/v1/documents`
 - Reports: `/api/v1/reports`
+
+## Authentication Endpoints
+
+- Register: `POST /api/v1/auth/register`
+- Login: `POST /api/v1/auth/login`
+- Current user: `GET /api/v1/auth/me`

@@ -21,6 +21,7 @@ The provided project PDF suggested Flask, but the mentor approved FastAPI. This 
 ## Current Progress
 
 - Day 1: Requirements reviewed and backend structure created
+- Day 2: Database models and authentication module added
 
 ## Folders
 
