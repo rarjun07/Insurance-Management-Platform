@@ -18,6 +18,7 @@ Day 1 and Day 2 setup is complete:
 - Customer Management APIs
 - Health Insurance Policy Management APIs
 - Premium Tracking APIs
+- Claim Management APIs
 
 ## Run Locally
 
@@ -90,6 +91,18 @@ Open:
 - Mark premium paid: `PATCH /api/v1/premiums/{payment_id}/mark-paid`
 - Policy payment history: `GET /api/v1/premiums/policy/{policy_id}/history`
 - Policy payment summary: `GET /api/v1/premiums/policy/{policy_id}/summary`
+
+## Claim Endpoints
+
+- Submit claim: `POST /api/v1/claims/`
+- List/filter claims: `GET /api/v1/claims/`
+- List pending claims: `GET /api/v1/claims/pending`
+- Policy claim history: `GET /api/v1/claims/policy/{policy_id}/history`
+- View claim: `GET /api/v1/claims/{claim_id}`
+- Update claim: `PUT /api/v1/claims/{claim_id}`
+- Decide claim: `PATCH /api/v1/claims/{claim_id}/decision`
+- Approve claim: `PATCH /api/v1/claims/{claim_id}/approve`
+- Reject claim: `PATCH /api/v1/claims/{claim_id}/reject`
 
 ## Authentication Endpoints
 
