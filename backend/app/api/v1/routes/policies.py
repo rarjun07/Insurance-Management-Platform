@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import require_roles
+from app.api.dependencies import ensure_customer_access, get_current_user, require_roles
 from app.core.config import settings
 from app.db.session import get_db
 from app.models.customer import Customer
@@ -17,6 +17,7 @@ router = APIRouter()
 
 
 AdminOrAgent = Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.AGENT))]
+AuthenticatedUser = Annotated[User, Depends(get_current_user)]
 
 
 @router.post("/", response_model=PolicyRead, status_code=status.HTTP_201_CREATED)
@@ -95,11 +96,12 @@ def list_active_policies(
 def get_policy(
     policy_id: int,
     db: Annotated[Session, Depends(get_db)],
-    current_user: AdminOrAgent,
+    current_user: AuthenticatedUser,
 ) -> Policy:
     policy = db.get(Policy, policy_id)
     if policy is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Policy not found")
+    ensure_customer_access(current_user, policy.customer_id)
     return policy
 
 

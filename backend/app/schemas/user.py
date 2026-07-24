@@ -7,6 +7,7 @@ class UserBase(BaseModel):
     name: str = Field(min_length=2, max_length=100)
     email: EmailStr
     role: UserRole = UserRole.CUSTOMER
+    customer_id: int | None = Field(default=None, gt=0)
 
 
 class UserCreate(UserBase):

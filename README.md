@@ -35,6 +35,7 @@ This project uses PostgreSQL with SQLAlchemy and Alembic migrations.
 - Day 7: Document Upload module added
 - Day 8: Reports Dashboard APIs added
 - Day 9: Search, filters, and pagination standardized
+- Day 10: Role-Based Authorization strengthened
 
 ## Folders
 

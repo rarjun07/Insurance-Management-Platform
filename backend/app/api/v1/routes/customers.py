@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import require_roles
+from app.api.dependencies import ensure_customer_access, get_current_user, require_roles
 from app.db.session import get_db
 from app.models.customer import Customer
 from app.models.user import User, UserRole
@@ -15,6 +15,7 @@ router = APIRouter()
 
 
 AdminOrAgent = Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.AGENT))]
+AuthenticatedUser = Annotated[User, Depends(get_current_user)]
 
 
 @router.post("/", response_model=CustomerRead, status_code=status.HTTP_201_CREATED)
@@ -65,11 +66,12 @@ def list_customers(
 def get_customer(
     customer_id: int,
     db: Annotated[Session, Depends(get_db)],
-    current_user: AdminOrAgent,
+    current_user: AuthenticatedUser,
 ) -> Customer:
     customer = db.get(Customer, customer_id)
     if customer is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
+    ensure_customer_access(current_user, customer.id)
     return customer
 
 
@@ -109,11 +111,12 @@ def update_customer(
 def get_customer_history(
     customer_id: int,
     db: Annotated[Session, Depends(get_db)],
-    current_user: AdminOrAgent,
+    current_user: AuthenticatedUser,
 ) -> CustomerHistory:
     customer = db.get(Customer, customer_id)
     if customer is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
+    ensure_customer_access(current_user, customer.id)
 
     return CustomerHistory(
         customer=customer,

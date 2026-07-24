@@ -22,6 +22,7 @@ Day 1 and Day 2 setup is complete:
 - Document Upload APIs
 - Reports Dashboard APIs
 - Standard pagination responses for list APIs
+- Role-based authorization with customer ownership checks
 
 ## Run Locally
 

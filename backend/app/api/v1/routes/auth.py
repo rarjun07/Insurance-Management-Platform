@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.api.dependencies import get_current_user
 from app.core.security import create_access_token, hash_password, verify_password
 from app.db.session import get_db
+from app.models.customer import Customer
 from app.models.user import User
 from app.schemas.user import Token, UserCreate, UserRead
 
@@ -26,12 +27,18 @@ def register_user(user_data: UserCreate, db: Annotated[Session, Depends(get_db)]
             status_code=status.HTTP_409_CONFLICT,
             detail="Email is already registered",
         )
+    if user_data.customer_id is not None and db.get(Customer, user_data.customer_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Customer not found",
+        )
 
     user = User(
         name=user_data.name,
         email=user_data.email,
         hashed_password=hash_password(user_data.password),
         role=user_data.role,
+        customer_id=user_data.customer_id,
     )
     db.add(user)
     db.commit()
@@ -52,7 +59,10 @@ def login_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    access_token = create_access_token(subject=user.email, claims={"role": user.role.value})
+    access_token = create_access_token(
+        subject=user.email,
+        claims={"role": user.role.value, "customer_id": user.customer_id},
+    )
     return Token(access_token=access_token)
 
 

@@ -46,3 +46,18 @@ def require_roles(*allowed_roles: UserRole):
         return current_user
 
     return role_checker
+
+
+def is_admin_or_agent(user: User) -> bool:
+    return user.role in {UserRole.ADMIN, UserRole.AGENT}
+
+
+def ensure_customer_access(user: User, customer_id: int) -> None:
+    if is_admin_or_agent(user):
+        return
+    if user.role == UserRole.CUSTOMER and user.customer_id == customer_id:
+        return
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="You do not have permission to access this customer data",
+    )

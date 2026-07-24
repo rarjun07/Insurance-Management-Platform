@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import require_roles
+from app.api.dependencies import ensure_customer_access, get_current_user, require_roles
 from app.db.session import get_db
 from app.models.policy import Policy
 from app.models.premium_payment import PaymentStatus, PremiumPayment
@@ -22,6 +22,7 @@ router = APIRouter()
 
 
 AdminOrAgent = Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.AGENT))]
+AuthenticatedUser = Annotated[User, Depends(get_current_user)]
 
 
 def resolve_payment_status(
@@ -108,11 +109,12 @@ def list_overdue_premiums(
 def get_premium_payment(
     payment_id: int,
     db: Annotated[Session, Depends(get_db)],
-    current_user: AdminOrAgent,
+    current_user: AuthenticatedUser,
 ) -> PremiumPayment:
     payment = db.get(PremiumPayment, payment_id)
     if payment is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Premium payment not found")
+    ensure_customer_access(current_user, payment.policy.customer_id)
     return payment
 
 
@@ -163,11 +165,12 @@ def mark_premium_paid(
 def get_policy_payment_history(
     policy_id: int,
     db: Annotated[Session, Depends(get_db)],
-    current_user: AdminOrAgent,
+    current_user: AuthenticatedUser,
 ) -> list[PremiumPayment]:
     policy = db.get(Policy, policy_id)
     if policy is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Policy not found")
+    ensure_customer_access(current_user, policy.customer_id)
 
     return (
         db.query(PremiumPayment)
@@ -181,11 +184,12 @@ def get_policy_payment_history(
 def get_policy_payment_summary(
     policy_id: int,
     db: Annotated[Session, Depends(get_db)],
-    current_user: AdminOrAgent,
+    current_user: AuthenticatedUser,
 ) -> PremiumSummary:
     policy = db.get(Policy, policy_id)
     if policy is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Policy not found")
+    ensure_customer_access(current_user, policy.customer_id)
 
     payments = db.query(PremiumPayment).filter(PremiumPayment.policy_id == policy_id).all()
     paid_payments = [payment for payment in payments if payment.payment_status == PaymentStatus.PAID]

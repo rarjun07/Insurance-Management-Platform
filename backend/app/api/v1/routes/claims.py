@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_current_user, require_roles
+from app.api.dependencies import ensure_customer_access, get_current_user, is_admin_or_agent, require_roles
 from app.db.session import get_db
 from app.models.claim import Claim, ClaimStatus
 from app.models.policy import Policy
@@ -28,6 +28,7 @@ def submit_claim(
     policy = db.get(Policy, claim_data.policy_id)
     if policy is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Policy not found")
+    ensure_customer_access(current_user, policy.customer_id)
 
     claim = Claim(
         policy_id=claim_data.policy_id,
@@ -90,6 +91,7 @@ def get_policy_claim_history(
     policy = db.get(Policy, policy_id)
     if policy is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Policy not found")
+    ensure_customer_access(current_user, policy.customer_id)
 
     return (
         db.query(Claim)
@@ -108,6 +110,8 @@ def get_claim(
     claim = db.get(Claim, claim_id)
     if claim is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Claim not found")
+    if not is_admin_or_agent(current_user):
+        ensure_customer_access(current_user, claim.policy.customer_id)
     return claim
 
 

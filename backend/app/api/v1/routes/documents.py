@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Upload
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_current_user, require_roles
+from app.api.dependencies import ensure_customer_access, get_current_user, require_roles
 from app.core.config import settings
 from app.db.session import get_db
 from app.models.customer import Customer
@@ -66,6 +66,7 @@ def upload_document(
     customer = db.get(Customer, customer_id)
     if customer is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
+    ensure_customer_access(current_user, customer.id)
 
     if policy_id is not None:
         policy = db.get(Policy, policy_id)
@@ -128,6 +129,7 @@ def get_document(
     document = db.get(Document, document_id)
     if document is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+    ensure_customer_access(current_user, document.customer_id)
     return document
 
 
@@ -140,6 +142,7 @@ def download_document(
     document = db.get(Document, document_id)
     if document is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+    ensure_customer_access(current_user, document.customer_id)
 
     file_path = Path(document.file_path)
     if not file_path.exists():
