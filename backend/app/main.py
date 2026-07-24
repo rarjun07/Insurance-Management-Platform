@@ -1,7 +1,14 @@
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.v1.routes import api_router
 from app.core.config import settings
+from app.core.exception_handlers import (
+    http_exception_handler,
+    unhandled_exception_handler,
+    validation_exception_handler,
+)
 
 
 app = FastAPI(
@@ -9,6 +16,10 @@ app = FastAPI(
     version=settings.PROJECT_VERSION,
     description="Backend API for the Insurance Management Platform.",
 )
+
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(Exception, unhandled_exception_handler)
 
 
 @app.get("/")

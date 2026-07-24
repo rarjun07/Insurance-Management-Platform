@@ -23,6 +23,21 @@ Day 1 and Day 2 setup is complete:
 - Reports Dashboard APIs
 - Standard pagination responses for list APIs
 - Role-based authorization with customer ownership checks
+- Centralized validation and error responses
+
+## Error Format
+
+API errors use:
+
+```json
+{
+  "error": {
+    "status_code": 400,
+    "message": "Error message",
+    "details": null
+  }
+}
+```
 
 ## Run Locally
 
