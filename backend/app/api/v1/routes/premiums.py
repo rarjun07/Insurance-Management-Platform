@@ -10,6 +10,7 @@ from app.db.session import get_db
 from app.models.policy import Policy
 from app.models.premium_payment import PaymentStatus, PremiumPayment
 from app.models.user import User, UserRole
+from app.schemas.pagination import PaginatedResponse
 from app.schemas.premium import (
     PremiumPaymentCreate,
     PremiumPaymentRead,
@@ -64,39 +65,43 @@ def record_premium_payment(
     return payment
 
 
-@router.get("/", response_model=list[PremiumPaymentRead])
+@router.get("/", response_model=PaginatedResponse[PremiumPaymentRead])
 def list_premium_payments(
     db: Annotated[Session, Depends(get_db)],
     current_user: AdminOrAgent,
     policy_id: Annotated[int | None, Query(gt=0)] = None,
     status_filter: Annotated[PaymentStatus | None, Query(alias="status")] = None,
+    due_before: Annotated[date | None, Query()] = None,
+    due_after: Annotated[date | None, Query()] = None,
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
-) -> list[PremiumPayment]:
+) -> PaginatedResponse[PremiumPaymentRead]:
     query = db.query(PremiumPayment)
     if policy_id:
         query = query.filter(PremiumPayment.policy_id == policy_id)
     if status_filter:
         query = query.filter(PremiumPayment.payment_status == status_filter)
+    if due_before:
+        query = query.filter(PremiumPayment.due_date <= due_before)
+    if due_after:
+        query = query.filter(PremiumPayment.due_date >= due_after)
 
-    return query.order_by(PremiumPayment.id.desc()).offset(skip).limit(limit).all()
+    total = query.count()
+    payments = query.order_by(PremiumPayment.id.desc()).offset(skip).limit(limit).all()
+    return PaginatedResponse(items=payments, total=total, skip=skip, limit=limit)
 
 
-@router.get("/overdue", response_model=list[PremiumPaymentRead])
+@router.get("/overdue", response_model=PaginatedResponse[PremiumPaymentRead])
 def list_overdue_premiums(
     db: Annotated[Session, Depends(get_db)],
     current_user: AdminOrAgent,
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
-) -> list[PremiumPayment]:
-    return (
-        db.query(PremiumPayment)
-        .filter(PremiumPayment.payment_status == PaymentStatus.OVERDUE)
-        .order_by(PremiumPayment.due_date.asc())
-        .offset(skip)
-        .limit(limit)
-        .all()
-    )
+) -> PaginatedResponse[PremiumPaymentRead]:
+    query = db.query(PremiumPayment).filter(PremiumPayment.payment_status == PaymentStatus.OVERDUE)
+    total = query.count()
+    payments = query.order_by(PremiumPayment.due_date.asc()).offset(skip).limit(limit).all()
+    return PaginatedResponse(items=payments, total=total, skip=skip, limit=limit)
 
 
 @router.get("/{payment_id}", response_model=PremiumPaymentRead)

@@ -9,6 +9,7 @@ from app.db.session import get_db
 from app.models.claim import Claim, ClaimStatus
 from app.models.policy import Policy
 from app.models.user import User, UserRole
+from app.schemas.pagination import PaginatedResponse
 from app.schemas.claim import ClaimCreate, ClaimDecision, ClaimRead, ClaimUpdate
 
 router = APIRouter()
@@ -41,39 +42,43 @@ def submit_claim(
     return claim
 
 
-@router.get("/", response_model=list[ClaimRead])
+@router.get("/", response_model=PaginatedResponse[ClaimRead])
 def list_claims(
     db: Annotated[Session, Depends(get_db)],
     current_user: AdminOrAgent,
     status_filter: Annotated[ClaimStatus | None, Query(alias="status")] = None,
     policy_id: Annotated[int | None, Query(gt=0)] = None,
+    submitted_before: Annotated[date | None, Query()] = None,
+    submitted_after: Annotated[date | None, Query()] = None,
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
-) -> list[Claim]:
+) -> PaginatedResponse[ClaimRead]:
     query = db.query(Claim)
     if status_filter:
         query = query.filter(Claim.status == status_filter)
     if policy_id:
         query = query.filter(Claim.policy_id == policy_id)
+    if submitted_before:
+        query = query.filter(Claim.submission_date <= submitted_before)
+    if submitted_after:
+        query = query.filter(Claim.submission_date >= submitted_after)
 
-    return query.order_by(Claim.id.desc()).offset(skip).limit(limit).all()
+    total = query.count()
+    claims = query.order_by(Claim.id.desc()).offset(skip).limit(limit).all()
+    return PaginatedResponse(items=claims, total=total, skip=skip, limit=limit)
 
 
-@router.get("/pending", response_model=list[ClaimRead])
+@router.get("/pending", response_model=PaginatedResponse[ClaimRead])
 def list_pending_claims(
     db: Annotated[Session, Depends(get_db)],
     current_user: AdminOrAgent,
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
-) -> list[Claim]:
-    return (
-        db.query(Claim)
-        .filter(Claim.status == ClaimStatus.PENDING)
-        .order_by(Claim.submission_date.asc())
-        .offset(skip)
-        .limit(limit)
-        .all()
-    )
+) -> PaginatedResponse[ClaimRead]:
+    query = db.query(Claim).filter(Claim.status == ClaimStatus.PENDING)
+    total = query.count()
+    claims = query.order_by(Claim.submission_date.asc()).offset(skip).limit(limit).all()
+    return PaginatedResponse(items=claims, total=total, skip=skip, limit=limit)
 
 
 @router.get("/policy/{policy_id}/history", response_model=list[ClaimRead])

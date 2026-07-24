@@ -14,6 +14,7 @@ from app.models.customer import Customer
 from app.models.document import Document
 from app.models.policy import Policy
 from app.models.user import User, UserRole
+from app.schemas.pagination import PaginatedResponse
 from app.schemas.document import DocumentRead, DocumentUploadResponse
 
 router = APIRouter()
@@ -95,7 +96,7 @@ def upload_document(
     return document
 
 
-@router.get("/", response_model=list[DocumentRead])
+@router.get("/", response_model=PaginatedResponse[DocumentRead])
 def list_documents(
     db: Annotated[Session, Depends(get_db)],
     current_user: AdminOrAgent,
@@ -104,7 +105,7 @@ def list_documents(
     document_type: Annotated[str | None, Query()] = None,
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
-) -> list[Document]:
+) -> PaginatedResponse[DocumentRead]:
     query = db.query(Document)
     if customer_id:
         query = query.filter(Document.customer_id == customer_id)
@@ -113,7 +114,9 @@ def list_documents(
     if document_type:
         query = query.filter(Document.document_type == document_type)
 
-    return query.order_by(Document.uploaded_at.desc()).offset(skip).limit(limit).all()
+    total = query.count()
+    documents = query.order_by(Document.uploaded_at.desc()).offset(skip).limit(limit).all()
+    return PaginatedResponse(items=documents, total=total, skip=skip, limit=limit)
 
 
 @router.get("/{document_id}", response_model=DocumentRead)

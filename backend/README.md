@@ -21,6 +21,7 @@ Day 1 and Day 2 setup is complete:
 - Claim Management APIs
 - Document Upload APIs
 - Reports Dashboard APIs
+- Standard pagination responses for list APIs
 
 ## Run Locally
 
@@ -64,6 +65,19 @@ Open:
 - Claims: `/api/v1/claims`
 - Documents: `/api/v1/documents`
 - Reports: `/api/v1/reports`
+
+## Pagination Format
+
+Main list APIs return:
+
+```json
+{
+  "items": [],
+  "total": 0,
+  "skip": 0,
+  "limit": 20
+}
+```
 
 ## Customer Endpoints
 

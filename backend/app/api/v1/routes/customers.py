@@ -9,6 +9,7 @@ from app.db.session import get_db
 from app.models.customer import Customer
 from app.models.user import User, UserRole
 from app.schemas.customer import CustomerCreate, CustomerHistory, CustomerRead, CustomerUpdate
+from app.schemas.pagination import PaginatedResponse
 
 router = APIRouter()
 
@@ -36,14 +37,14 @@ def create_customer(
     return customer
 
 
-@router.get("/", response_model=list[CustomerRead])
+@router.get("/", response_model=PaginatedResponse[CustomerRead])
 def list_customers(
     db: Annotated[Session, Depends(get_db)],
     current_user: AdminOrAgent,
     search: Annotated[str | None, Query(max_length=100)] = None,
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
-) -> list[Customer]:
+) -> PaginatedResponse[CustomerRead]:
     query = db.query(Customer)
     if search:
         search_pattern = f"%{search}%"
@@ -55,7 +56,9 @@ def list_customers(
             )
         )
 
-    return query.order_by(Customer.id.desc()).offset(skip).limit(limit).all()
+    total = query.count()
+    customers = query.order_by(Customer.id.desc()).offset(skip).limit(limit).all()
+    return PaginatedResponse(items=customers, total=total, skip=skip, limit=limit)
 
 
 @router.get("/{customer_id}", response_model=CustomerRead)

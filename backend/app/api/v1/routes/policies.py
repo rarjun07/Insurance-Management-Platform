@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import require_roles
@@ -9,6 +10,7 @@ from app.db.session import get_db
 from app.models.customer import Customer
 from app.models.policy import Policy, PolicyStatus
 from app.models.user import User, UserRole
+from app.schemas.pagination import PaginatedResponse
 from app.schemas.policy import PolicyCreate, PolicyRead, PolicyRenew, PolicyUpdate
 
 router = APIRouter()
@@ -47,39 +49,46 @@ def create_policy(
     return policy
 
 
-@router.get("/", response_model=list[PolicyRead])
+@router.get("/", response_model=PaginatedResponse[PolicyRead])
 def list_policies(
     db: Annotated[Session, Depends(get_db)],
     current_user: AdminOrAgent,
     status_filter: Annotated[PolicyStatus | None, Query(alias="status")] = None,
     customer_id: Annotated[int | None, Query(gt=0)] = None,
+    search: Annotated[str | None, Query(max_length=100)] = None,
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
-) -> list[Policy]:
+) -> PaginatedResponse[PolicyRead]:
     query = db.query(Policy)
     if status_filter:
         query = query.filter(Policy.status == status_filter)
     if customer_id:
         query = query.filter(Policy.customer_id == customer_id)
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(
+            or_(
+                Policy.policy_number.ilike(search_pattern),
+                Policy.policy_type.ilike(search_pattern),
+            )
+        )
 
-    return query.order_by(Policy.id.desc()).offset(skip).limit(limit).all()
+    total = query.count()
+    policies = query.order_by(Policy.id.desc()).offset(skip).limit(limit).all()
+    return PaginatedResponse(items=policies, total=total, skip=skip, limit=limit)
 
 
-@router.get("/active", response_model=list[PolicyRead])
+@router.get("/active", response_model=PaginatedResponse[PolicyRead])
 def list_active_policies(
     db: Annotated[Session, Depends(get_db)],
     current_user: AdminOrAgent,
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
-) -> list[Policy]:
-    return (
-        db.query(Policy)
-        .filter(Policy.status == PolicyStatus.ACTIVE)
-        .order_by(Policy.id.desc())
-        .offset(skip)
-        .limit(limit)
-        .all()
-    )
+) -> PaginatedResponse[PolicyRead]:
+    query = db.query(Policy).filter(Policy.status == PolicyStatus.ACTIVE)
+    total = query.count()
+    policies = query.order_by(Policy.id.desc()).offset(skip).limit(limit).all()
+    return PaginatedResponse(items=policies, total=total, skip=skip, limit=limit)
 
 
 @router.get("/{policy_id}", response_model=PolicyRead)
