@@ -38,12 +38,14 @@ This project uses PostgreSQL with SQLAlchemy and Alembic migrations.
 - Day 10: Role-Based Authorization strengthened
 - Day 11: Validation and error handling standardized
 - Day 12: Backend smoke tests added
+- Day 13: Responsive frontend starter added
 
 ## Folders
 
 - `backend/` - FastAPI backend
+- `frontend/` - React frontend
 - `docs/` - project notes and daily planning
 
 ## Next Step
 
-Day 2 will add database models and authentication.
+Day 14 will focus on deployment, documentation, and final presentation preparation.
