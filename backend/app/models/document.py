@@ -11,8 +11,11 @@ class Document(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"), nullable=False)
+    policy_id: Mapped[int | None] = mapped_column(ForeignKey("policies.id"), nullable=True)
+    document_type: Mapped[str] = mapped_column(String(50), nullable=False)
     file_name: Mapped[str] = mapped_column(String(255), nullable=False)
     file_path: Mapped[str] = mapped_column(String(500), nullable=False)
     uploaded_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
     customer = relationship("Customer", back_populates="documents")
+    policy = relationship("Policy")

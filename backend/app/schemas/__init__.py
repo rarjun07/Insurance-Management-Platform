@@ -1,5 +1,6 @@
 from app.schemas.claim import ClaimCreate, ClaimDecision, ClaimRead, ClaimUpdate
 from app.schemas.customer import CustomerCreate, CustomerHistory, CustomerRead, CustomerUpdate
+from app.schemas.document import DocumentRead, DocumentUploadResponse
 from app.schemas.policy import PolicyCreate, PolicyRead, PolicyRenew, PolicyUpdate
 from app.schemas.premium import (
     PremiumPaymentCreate,
@@ -18,6 +19,8 @@ __all__ = [
     "CustomerHistory",
     "CustomerRead",
     "CustomerUpdate",
+    "DocumentRead",
+    "DocumentUploadResponse",
     "PolicyCreate",
     "PolicyRead",
     "PolicyRenew",

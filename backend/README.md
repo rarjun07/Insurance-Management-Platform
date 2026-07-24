@@ -19,6 +19,7 @@ Day 1 and Day 2 setup is complete:
 - Health Insurance Policy Management APIs
 - Premium Tracking APIs
 - Claim Management APIs
+- Document Upload APIs
 
 ## Run Locally
 
@@ -103,6 +104,13 @@ Open:
 - Decide claim: `PATCH /api/v1/claims/{claim_id}/decision`
 - Approve claim: `PATCH /api/v1/claims/{claim_id}/approve`
 - Reject claim: `PATCH /api/v1/claims/{claim_id}/reject`
+
+## Document Endpoints
+
+- Upload document: `POST /api/v1/documents/upload`
+- List/filter documents: `GET /api/v1/documents/`
+- View document metadata: `GET /api/v1/documents/{document_id}`
+- Download document: `GET /api/v1/documents/{document_id}/download`
 
 ## Authentication Endpoints
 

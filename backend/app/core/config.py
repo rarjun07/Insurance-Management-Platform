@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     API_V1_PREFIX: str = "/api/v1"
     DATABASE_URL: str = "postgresql+psycopg://postgres:postgres@localhost:5432/insurance_management"
     ACTIVE_POLICY_TYPE: str = "Health Insurance"
+    UPLOAD_DIR: str = "uploads"
     SECRET_KEY: str = "change-this-secret-key"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
