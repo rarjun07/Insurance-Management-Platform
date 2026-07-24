@@ -17,6 +17,7 @@ Day 1 and Day 2 setup is complete:
 - Alembic migration scaffolding
 - Customer Management APIs
 - Health Insurance Policy Management APIs
+- Premium Tracking APIs
 
 ## Run Locally
 
@@ -78,6 +79,17 @@ Open:
 - Update policy: `PUT /api/v1/policies/{policy_id}`
 - Renew policy: `PATCH /api/v1/policies/{policy_id}/renew`
 - Cancel policy: `PATCH /api/v1/policies/{policy_id}/cancel`
+
+## Premium Endpoints
+
+- Record premium: `POST /api/v1/premiums/`
+- List/filter premiums: `GET /api/v1/premiums/`
+- List overdue premiums: `GET /api/v1/premiums/overdue`
+- View premium: `GET /api/v1/premiums/{payment_id}`
+- Update premium: `PUT /api/v1/premiums/{payment_id}`
+- Mark premium paid: `PATCH /api/v1/premiums/{payment_id}/mark-paid`
+- Policy payment history: `GET /api/v1/premiums/policy/{policy_id}/history`
+- Policy payment summary: `GET /api/v1/premiums/policy/{policy_id}/summary`
 
 ## Authentication Endpoints
 

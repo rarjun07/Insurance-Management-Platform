@@ -30,6 +30,7 @@ This project uses PostgreSQL with SQLAlchemy and Alembic migrations.
 - Day 2: Database models and authentication module added
 - Day 3: Customer Management module added
 - Day 4: Health Insurance Policy Management module added
+- Day 5: Premium Tracking module added
 
 ## Folders
 
