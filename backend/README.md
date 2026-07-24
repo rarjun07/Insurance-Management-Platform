@@ -51,6 +51,14 @@ alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
+## Run Tests
+
+```bash
+cd backend
+source .venv/bin/activate
+pytest -q
+```
+
 ## PostgreSQL Setup
 
 Create the local PostgreSQL database before running migrations:
