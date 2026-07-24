@@ -8,6 +8,13 @@ from app.schemas.premium import (
     PremiumPaymentUpdate,
     PremiumSummary,
 )
+from app.schemas.report import (
+    ClaimReport,
+    CustomerReport,
+    DashboardReport,
+    PolicyReport,
+    PremiumReport,
+)
 from app.schemas.user import Token, TokenPayload, UserCreate, UserRead
 
 __all__ = [
@@ -29,6 +36,11 @@ __all__ = [
     "PremiumPaymentRead",
     "PremiumPaymentUpdate",
     "PremiumSummary",
+    "ClaimReport",
+    "CustomerReport",
+    "DashboardReport",
+    "PolicyReport",
+    "PremiumReport",
     "Token",
     "TokenPayload",
     "UserCreate",

@@ -33,6 +33,7 @@ This project uses PostgreSQL with SQLAlchemy and Alembic migrations.
 - Day 5: Premium Tracking module added
 - Day 6: Claim Management module added
 - Day 7: Document Upload module added
+- Day 8: Reports Dashboard APIs added
 
 ## Folders
 

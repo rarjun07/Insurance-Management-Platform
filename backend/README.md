@@ -20,6 +20,7 @@ Day 1 and Day 2 setup is complete:
 - Premium Tracking APIs
 - Claim Management APIs
 - Document Upload APIs
+- Reports Dashboard APIs
 
 ## Run Locally
 
@@ -111,6 +112,14 @@ Open:
 - List/filter documents: `GET /api/v1/documents/`
 - View document metadata: `GET /api/v1/documents/{document_id}`
 - Download document: `GET /api/v1/documents/{document_id}/download`
+
+## Report Endpoints
+
+- Dashboard summary: `GET /api/v1/reports/summary`
+- Customer report: `GET /api/v1/reports/customers`
+- Policy report: `GET /api/v1/reports/policies`
+- Claim report: `GET /api/v1/reports/claims`
+- Premium report: `GET /api/v1/reports/premiums`
 
 ## Authentication Endpoints
 
