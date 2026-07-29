@@ -25,6 +25,13 @@ class PremiumReport(BaseModel):
     total_collected_amount: Decimal
 
 
+class PublicPlatformSummary(BaseModel):
+    active_policies: int
+    pending_claims: int
+    total_collected_amount: Decimal
+    support_email: str
+
+
 class CustomerReport(BaseModel):
     total_customers: int
 
@@ -34,3 +41,11 @@ class DashboardReport(BaseModel):
     policies: PolicyReport
     claims: ClaimReport
     premiums: PremiumReport
+
+
+class MonthlyReportItem(BaseModel):
+    month: str
+    new_customers: int
+    new_policies: int
+    claims_submitted: int
+    premium_collected: Decimal

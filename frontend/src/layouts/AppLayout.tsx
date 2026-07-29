@@ -4,19 +4,25 @@ import {
   ClipboardList,
   FileText,
   Home,
+  ListChecks,
   LogOut,
+  Search,
   Settings,
   ShieldCheck,
   Users,
   WalletCards,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { BrandLockup } from "../components/BrandLockup";
+import { getMediaUrl } from "../services/api";
 import type { AppUser, UserRole } from "../types";
 
 export type PageKey =
   | "dashboard"
+  | "employees"
   | "customers"
   | "policies"
+  | "plans"
   | "premiums"
   | "claims"
   | "documents"
@@ -24,16 +30,24 @@ export type PageKey =
   | "settings"
   | "profile";
 
-const navItems = [
-  { key: "dashboard", label: "Dashboard", icon: Home, roles: ["Admin", "Insurance Agent", "Customer"] },
-  { key: "customers", label: "Customers", icon: Users, roles: ["Admin", "Insurance Agent"] },
-  { key: "policies", label: "Policies", icon: ShieldCheck, roles: ["Admin", "Insurance Agent", "Customer"] },
-  { key: "premiums", label: "Premiums", icon: WalletCards, roles: ["Admin", "Insurance Agent", "Customer"] },
-  { key: "claims", label: "Claims", icon: ClipboardList, roles: ["Admin", "Insurance Agent", "Customer"] },
-  { key: "documents", label: "Documents", icon: FileText, roles: ["Admin", "Insurance Agent", "Customer"] },
-  { key: "reports", label: "Reports", icon: BarChart3, roles: ["Admin"] },
-  { key: "settings", label: "Settings", icon: Settings, roles: ["Admin"] },
-] satisfies Array<{ key: PageKey; label: string; icon: LucideIcon; roles: UserRole[] }>;
+const navItems: Array<{ key: PageKey; label: string; icon: LucideIcon; roles: UserRole[] }> = [
+  { key: "dashboard", label: "Dashboard", icon: Home, roles: ["admin", "agent", "customer"] },
+  { key: "employees", label: "Employees", icon: Users, roles: ["admin"] },
+  { key: "customers", label: "Customers", icon: Users, roles: ["admin", "agent"] },
+  { key: "policies", label: "Policies", icon: ShieldCheck, roles: ["admin", "agent", "customer"] },
+  { key: "plans", label: "Plans", icon: ListChecks, roles: ["admin"] },
+  { key: "premiums", label: "Premiums", icon: WalletCards, roles: ["admin", "agent", "customer"] },
+  { key: "claims", label: "Claims", icon: ClipboardList, roles: ["admin", "agent", "customer"] },
+  { key: "documents", label: "Documents", icon: FileText, roles: ["admin", "agent", "customer"] },
+  { key: "reports", label: "Reports", icon: BarChart3, roles: ["admin"] },
+  { key: "settings", label: "Settings", icon: Settings, roles: ["admin"] },
+];
+
+const roleLabels: Record<UserRole, string> = {
+  admin: "Admin",
+  agent: "Agent",
+  customer: "Customer",
+};
 
 type AppLayoutProps = {
   activePage: PageKey;
@@ -53,7 +67,19 @@ export function AppLayout({
   onLogout,
 }: AppLayoutProps) {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const profileImageUrl = getMediaUrl(currentUser.profile_image_url);
   const visibleNavItems = navItems.filter((item) => item.roles.includes(currentUser.role));
+  const searchResults = visibleNavItems.filter((item) =>
+    item.label.toLowerCase().includes(searchQuery.trim().toLowerCase()),
+  );
+
+  function openSearchResult(page: PageKey) {
+    onNavigate(page);
+    setSearchQuery("");
+    setIsSearchFocused(false);
+  }
 
   return (
     <div className="app-shell">
@@ -61,10 +87,7 @@ export function AppLayout({
         <div className="sidebar-top">
           <div className="brand">
             <div className="brand-mark">H</div>
-            <div>
-              <p className="brand-title">HealthInsure</p>
-              <p className="brand-subtitle">Management</p>
-            </div>
+            <BrandLockup inverse compact />
           </div>
 
           <div className="workspace-card">
@@ -98,12 +121,16 @@ export function AppLayout({
 
         <div className="sidebar-bottom">
           <div className="sidebar-user-card">
-            <div className="workspace-icon ready">
-              <ShieldCheck size={18} />
+            <div className={`workspace-icon ready ${profileImageUrl ? "has-profile-image" : ""}`}>
+              {profileImageUrl ? (
+                <img src={profileImageUrl} alt={`${currentUser.name} profile`} />
+              ) : (
+                <ShieldCheck size={18} />
+              )}
             </div>
             <div>
               <strong>{currentUser.name}</strong>
-              <span>{currentUser.role}</span>
+              <span>{roleLabels[currentUser.role]}</span>
             </div>
           </div>
           <button className="sidebar-profile-button" onClick={() => onNavigate("profile")}>
@@ -118,18 +145,56 @@ export function AppLayout({
 
       <main className="main-content">
         <header className="topbar">
-          <div>
+          <div className="topbar-title">
             <p className="eyebrow">Health Insurance Platform</p>
             <h1>{pageTitle}</h1>
           </div>
+          <div className="topbar-search">
+            <Search size={19} aria-hidden="true" />
+            <input
+              aria-label="Search workspace pages"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => window.setTimeout(() => setIsSearchFocused(false), 120)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && searchResults[0]) {
+                  openSearchResult(searchResults[0].key);
+                }
+                if (event.key === "Escape") {
+                  setSearchQuery("");
+                  setIsSearchFocused(false);
+                  event.currentTarget.blur();
+                }
+              }}
+              placeholder="Search dashboard, policies, claims..."
+            />
+            {isSearchFocused && searchQuery.trim() ? (
+              <div className="topbar-search-results">
+                {searchResults.length ? searchResults.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <button key={item.key} onMouseDown={() => openSearchResult(item.key)}>
+                      <Icon size={17} />
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                }) : <p>No accessible page found</p>}
+              </div>
+            ) : null}
+          </div>
           <div className="topbar-actions">
-            <span className="badge">{currentUser.role}</span>
+            <span className="badge">{roleLabels[currentUser.role]}</span>
             <div className="profile-menu-wrap">
               <button
-                className="user-pill clickable"
+                className={`user-pill clickable ${profileImageUrl ? "has-profile-image" : ""}`}
                 onClick={() => setIsProfileMenuOpen((isOpen) => !isOpen)}
               >
-                {currentUser.name.slice(0, 2).toUpperCase()}
+                {profileImageUrl ? (
+                  <img src={profileImageUrl} alt={`${currentUser.name} profile`} />
+                ) : (
+                  currentUser.name.slice(0, 2).toUpperCase()
+                )}
               </button>
               {isProfileMenuOpen ? (
                 <div className="profile-menu">
@@ -139,7 +204,7 @@ export function AppLayout({
                   </div>
                   <button onClick={() => onNavigate("profile")}>My Account</button>
                   <button onClick={() => onNavigate("profile")}>Update Profile</button>
-                  <button onClick={() => onNavigate("settings")}>Settings</button>
+                  {currentUser.role === "admin" ? <button onClick={() => onNavigate("settings")}>Settings</button> : null}
                   <button className="danger-text" onClick={onLogout}>
                     Logout
                   </button>
@@ -149,7 +214,9 @@ export function AppLayout({
           </div>
         </header>
 
-        {children}
+        <div className="page-scroll-area">
+          {children}
+        </div>
       </main>
     </div>
   );

@@ -49,8 +49,9 @@ The frontend now includes working navigation for:
 
 The frontend includes:
 
-- Login page with demo role selection
-- Register page with role selection
+- Login page connected to FastAPI JWT authentication
+- Register page connected to FastAPI user creation
+- Customer registration creates and links a customer profile automatically
 - Public landing page before authentication
 - Sticky home navbar
 - Separate login page
@@ -59,19 +60,28 @@ The frontend includes:
 - Profile dropdown with My Account, Update Profile, Settings, and Logout actions
 - Logout action moved inside profile menu
 - Role-based navigation
-- Customer role own-data view behavior
+- Customer role own-data view behavior from backend `/mine` endpoints
+- Piston-style authentication pages with role selector cards
 - Sidebar page navigation
 - Reference-style left sidebar with workspace card
 - Bottom sidebar account area
 - Bottom sidebar logout button
 - Dashboard summary cards
 - Customer search
-- Add customer demo action
-- Health policy renew/cancel actions
-- Premium mark-paid action
-- Claim approve/reject actions
-- Document table
-- Reports summary
+- Add customer API form
+- Edit customer API form
+- Create health policy API form
+- Record premium API form
+- Submit claim API form
+- Upload document API form
+- Authenticated document download action
+- Health policy renew/cancel API actions
+- Premium mark-paid API action
+- Claim approve/reject API actions
+- Document table from backend data
+- Reports summary from backend data
+- Policy expiry alerts
+- Monthly business report section
 - Settings summary
 
 ## Role-Based UI
@@ -114,7 +124,7 @@ Frontend production build was verified with:
 npm run build
 ```
 
-## API Integration Preparation
+## API Integration
 
 Created:
 
@@ -122,10 +132,22 @@ Created:
 frontend/src/services/api.ts
 ```
 
-The frontend defaults to:
+The frontend uses token storage and defaults to:
 
 ```text
 http://127.0.0.1:8000
+```
+
+Backend seed accounts:
+
+- `admin@healthinsure.com`
+- `agent@healthinsure.com`
+- `customer@healthinsure.com`
+
+Default password:
+
+```text
+password123
 ```
 
 ## Day 14 Target

@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import ensure_customer_access, get_current_user, require_roles
+from app.api.dependencies import ensure_customer_access, get_current_user, is_admin, require_roles
 from app.db.session import get_db
 from app.models.policy import Policy
 from app.models.premium_payment import PaymentStatus, PremiumPayment
@@ -21,8 +21,21 @@ from app.schemas.premium import (
 router = APIRouter()
 
 
-AdminOrAgent = Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.AGENT))]
+StaffOnly = Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.AGENT))]
 AuthenticatedUser = Annotated[User, Depends(get_current_user)]
+
+def refresh_overdue_premiums(db: Session) -> None:
+    changed = (
+        db.query(PremiumPayment)
+        .filter(
+            PremiumPayment.payment_status == PaymentStatus.PENDING,
+            PremiumPayment.payment_date.is_(None),
+            PremiumPayment.due_date < date.today(),
+        )
+        .update({PremiumPayment.payment_status: PaymentStatus.OVERDUE}, synchronize_session=False)
+    )
+    if changed:
+        db.commit()
 
 
 def resolve_payment_status(
@@ -43,7 +56,7 @@ def resolve_payment_status(
 def record_premium_payment(
     payment_data: PremiumPaymentCreate,
     db: Annotated[Session, Depends(get_db)],
-    current_user: AdminOrAgent,
+    current_user: StaffOnly,
 ) -> PremiumPayment:
     policy = db.get(Policy, payment_data.policy_id)
     if policy is None:
@@ -69,7 +82,7 @@ def record_premium_payment(
 @router.get("/", response_model=PaginatedResponse[PremiumPaymentRead])
 def list_premium_payments(
     db: Annotated[Session, Depends(get_db)],
-    current_user: AdminOrAgent,
+    current_user: StaffOnly,
     policy_id: Annotated[int | None, Query(gt=0)] = None,
     status_filter: Annotated[PaymentStatus | None, Query(alias="status")] = None,
     due_before: Annotated[date | None, Query()] = None,
@@ -77,6 +90,7 @@ def list_premium_payments(
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> PaginatedResponse[PremiumPaymentRead]:
+    refresh_overdue_premiums(db)
     query = db.query(PremiumPayment)
     if policy_id:
         query = query.filter(PremiumPayment.policy_id == policy_id)
@@ -95,13 +109,31 @@ def list_premium_payments(
 @router.get("/overdue", response_model=PaginatedResponse[PremiumPaymentRead])
 def list_overdue_premiums(
     db: Annotated[Session, Depends(get_db)],
-    current_user: AdminOrAgent,
+    current_user: StaffOnly,
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> PaginatedResponse[PremiumPaymentRead]:
+    refresh_overdue_premiums(db)
     query = db.query(PremiumPayment).filter(PremiumPayment.payment_status == PaymentStatus.OVERDUE)
     total = query.count()
     payments = query.order_by(PremiumPayment.due_date.asc()).offset(skip).limit(limit).all()
+    return PaginatedResponse(items=payments, total=total, skip=skip, limit=limit)
+
+
+@router.get("/mine", response_model=PaginatedResponse[PremiumPaymentRead])
+def list_my_premiums(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: AuthenticatedUser,
+    skip: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+) -> PaginatedResponse[PremiumPaymentRead]:
+    refresh_overdue_premiums(db)
+    if current_user.customer_id is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User is not linked to a customer profile")
+
+    query = db.query(PremiumPayment).join(Policy).filter(Policy.customer_id == current_user.customer_id)
+    total = query.count()
+    payments = query.order_by(PremiumPayment.due_date.desc()).offset(skip).limit(limit).all()
     return PaginatedResponse(items=payments, total=total, skip=skip, limit=limit)
 
 
@@ -123,7 +155,7 @@ def update_premium_payment(
     payment_id: int,
     payment_data: PremiumPaymentUpdate,
     db: Annotated[Session, Depends(get_db)],
-    current_user: AdminOrAgent,
+    current_user: StaffOnly,
 ) -> PremiumPayment:
     payment = db.get(PremiumPayment, payment_id)
     if payment is None:
@@ -148,11 +180,13 @@ def update_premium_payment(
 def mark_premium_paid(
     payment_id: int,
     db: Annotated[Session, Depends(get_db)],
-    current_user: AdminOrAgent,
+    current_user: AuthenticatedUser,
 ) -> PremiumPayment:
     payment = db.get(PremiumPayment, payment_id)
     if payment is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Premium payment not found")
+    if not is_admin(current_user):
+        ensure_customer_access(current_user, payment.policy.customer_id)
 
     payment.payment_date = date.today()
     payment.payment_status = PaymentStatus.PAID

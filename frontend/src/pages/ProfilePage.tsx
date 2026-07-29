@@ -1,16 +1,79 @@
-import type { AppUser } from "../types";
+import { useMemo, useState } from "react";
+
 import { StatusBadge } from "../components/StatusBadge";
+import { getMediaUrl } from "../services/api";
+import type { AppUser, Customer } from "../types";
 
 type ProfilePageProps = {
   user: AppUser;
+  customer: Customer | null;
   onLogout: () => void;
+  onSave: (payload: {
+    name?: string;
+    email?: string;
+    password?: string;
+    phone?: string;
+    address?: string;
+  }) => Promise<void>;
 };
 
-export function ProfilePage({ user, onLogout }: ProfilePageProps) {
+export function ProfilePage({ user, customer, onLogout, onSave }: ProfilePageProps) {
+  const [values, setValues] = useState({
+    name: user.name,
+    email: user.email,
+    phone: customer?.phone ?? "",
+    address: customer?.address ?? "",
+    password: "",
+  });
+  const [isSaving, setIsSaving] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const profileImageUrl = getMediaUrl(user.profile_image_url);
+
+  const roleLabel = user.role === "admin" ? "Admin" : user.role === "agent" ? "Agent" : "Customer";
+  const emailError = values.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email) ? "Enter a valid email address." : "";
+  const phoneError = values.phone && !/^\d{10}$/.test(values.phone) ? "Phone number must be exactly 10 digits." : "";
+  const passwordError = values.password && values.password.length < 8 ? "Password must be at least 8 characters." : "";
+  const hasValidationErrors = Boolean(emailError || phoneError || passwordError);
+  const permissionsLabel = useMemo(() => {
+    if (user.role === "customer") return "Own records only";
+    if (user.role === "agent") return "Operational modules";
+    return "Full platform access";
+  }, [user.role]);
+
+  async function submitProfile() {
+    if (hasValidationErrors) return;
+
+    setIsSaving(true);
+    setErrorMessage("");
+    setSuccessMessage("");
+    try {
+      await onSave({
+        name: values.name,
+        email: values.email,
+        phone: values.phone || undefined,
+        address: values.address || undefined,
+        password: values.password || undefined,
+      });
+      setValues((currentValues) => ({ ...currentValues, password: "" }));
+      setSuccessMessage("Profile updated successfully.");
+    } catch (caughtError) {
+      setErrorMessage(caughtError instanceof Error ? caughtError.message : "Unable to update profile.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   return (
     <section className="panel page-panel">
       <div className="profile-header">
-        <div className="profile-avatar">{user.name.slice(0, 2).toUpperCase()}</div>
+        <div className={`profile-avatar ${profileImageUrl ? "has-profile-image" : ""}`}>
+          {profileImageUrl ? (
+            <img src={profileImageUrl} alt={`${user.name} profile`} />
+          ) : (
+            user.name.slice(0, 2).toUpperCase()
+          )}
+        </div>
         <div>
           <p className="eyebrow">Signed-in profile</p>
           <h2>{user.name}</h2>
@@ -22,25 +85,83 @@ export function ProfilePage({ user, onLogout }: ProfilePageProps) {
       <div className="settings-grid">
         <div>
           <span>Role</span>
-          <strong>{user.role}</strong>
+          <strong>{roleLabel}</strong>
         </div>
         <div>
           <span>Department</span>
-          <strong>{user.department}</strong>
+          <strong>{user.role === "customer" ? "Customer Portal" : "Operations"}</strong>
         </div>
         <div>
           <span>Customer link</span>
-          <strong>{user.customerId ?? "Not required"}</strong>
+          <strong>{user.customer_id ?? "Not required"}</strong>
         </div>
         <div>
           <span>Permissions</span>
-          <strong>{user.role === "Customer" ? "Own records only" : "Operational access"}</strong>
+          <strong>{permissionsLabel}</strong>
         </div>
       </div>
 
-      <button className="danger-button profile-logout" onClick={onLogout}>
-        Logout
-      </button>
+      <div className="modal-form profile-form">
+        {errorMessage ? <p className="error-message">{errorMessage}</p> : null}
+        {successMessage ? <p className="success-message">{successMessage}</p> : null}
+
+        <label>
+          Full Name
+          <input value={values.name} onChange={(event) => setValues({ ...values, name: event.target.value })} />
+        </label>
+
+        <label>
+          Email
+          <input
+            className={emailError ? "input-invalid" : ""}
+            type="email"
+            inputMode="email"
+            value={values.email}
+            onChange={(event) => setValues({ ...values, email: event.target.value.toLowerCase().replace(/\s+/g, "") })}
+          />
+          {emailError ? <span className="field-error">{emailError}</span> : null}
+        </label>
+
+        {user.role === "customer" ? (
+          <>
+            <label>
+              Phone
+              <input
+                className={phoneError ? "input-invalid" : ""}
+                inputMode="numeric"
+                maxLength={10}
+                value={values.phone}
+                onChange={(event) => setValues({ ...values, phone: event.target.value.replace(/[^\d]/g, "").slice(0, 10) })}
+              />
+              {phoneError ? <span className="field-error">{phoneError}</span> : null}
+            </label>
+
+            <label>
+              Address
+              <input value={values.address} onChange={(event) => setValues({ ...values, address: event.target.value })} />
+            </label>
+          </>
+        ) : null}
+
+        <label>
+          New Password
+          <input
+            className={passwordError ? "input-invalid" : ""}
+            type="password"
+            value={values.password}
+            onChange={(event) => setValues({ ...values, password: event.target.value })}
+            placeholder="Leave blank to keep current password"
+          />
+          {passwordError ? <span className="field-error">{passwordError}</span> : null}
+        </label>
+
+        <div className="button-row">
+          <button className="primary-button" disabled={isSaving || hasValidationErrors} onClick={submitProfile}>
+            {isSaving ? "Saving..." : "Save Profile"}
+          </button>
+          <button className="danger-button" onClick={onLogout}>Logout</button>
+        </div>
+      </div>
     </section>
   );
 }

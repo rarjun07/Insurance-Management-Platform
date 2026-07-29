@@ -8,6 +8,7 @@ from app.models.policy import PolicyStatus
 
 class PolicyBase(BaseModel):
     customer_id: int = Field(gt=0)
+    plan_id: int | None = Field(default=None, gt=0)
     policy_type: str = Field(default="Health Insurance", min_length=2, max_length=100)
     policy_number: str = Field(min_length=3, max_length=50)
     premium_amount: Decimal = Field(gt=0, max_digits=12, decimal_places=2)

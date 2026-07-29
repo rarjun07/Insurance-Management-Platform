@@ -19,6 +19,7 @@ class Policy(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"), nullable=False)
+    plan_id: Mapped[int | None] = mapped_column(ForeignKey("insurance_plans.id"), nullable=True, index=True)
     policy_type: Mapped[str] = mapped_column(String(100), nullable=False)
     policy_number: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
     premium_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
@@ -27,5 +28,6 @@ class Policy(Base):
     status: Mapped[PolicyStatus] = mapped_column(Enum(PolicyStatus), default=PolicyStatus.ACTIVE, nullable=False)
 
     customer = relationship("Customer", back_populates="policies")
+    plan = relationship("InsurancePlan", back_populates="policies")
     claims = relationship("Claim", back_populates="policy")
     premium_payments = relationship("PremiumPayment", back_populates="policy")

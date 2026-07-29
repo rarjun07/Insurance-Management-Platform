@@ -2,6 +2,7 @@ from app.schemas.claim import ClaimCreate, ClaimDecision, ClaimRead, ClaimUpdate
 from app.schemas.customer import CustomerCreate, CustomerHistory, CustomerRead, CustomerUpdate
 from app.schemas.document import DocumentRead, DocumentUploadResponse
 from app.schemas.error import ErrorDetail, ErrorResponse
+from app.schemas.insurance_plan import InsurancePlanCreate, InsurancePlanRead, InsurancePlanUpdate
 from app.schemas.pagination import PaginatedResponse
 from app.schemas.policy import PolicyCreate, PolicyRead, PolicyRenew, PolicyUpdate
 from app.schemas.premium import (
@@ -14,6 +15,7 @@ from app.schemas.report import (
     ClaimReport,
     CustomerReport,
     DashboardReport,
+    MonthlyReportItem,
     PolicyReport,
     PremiumReport,
 )
@@ -32,6 +34,9 @@ __all__ = [
     "DocumentUploadResponse",
     "ErrorDetail",
     "ErrorResponse",
+    "InsurancePlanCreate",
+    "InsurancePlanRead",
+    "InsurancePlanUpdate",
     "PaginatedResponse",
     "PolicyCreate",
     "PolicyRead",
@@ -44,6 +49,7 @@ __all__ = [
     "ClaimReport",
     "CustomerReport",
     "DashboardReport",
+    "MonthlyReportItem",
     "PolicyReport",
     "PremiumReport",
     "Token",

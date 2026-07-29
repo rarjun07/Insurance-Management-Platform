@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.api.dependencies import ensure_customer_access, get_current_user, require_roles
 from app.db.session import get_db
 from app.models.customer import Customer
+from app.models.policy_application import PolicyApplicationStatus
 from app.models.user import User, UserRole
 from app.schemas.customer import CustomerCreate, CustomerHistory, CustomerRead, CustomerUpdate
 from app.schemas.pagination import PaginatedResponse
@@ -14,7 +15,7 @@ from app.schemas.pagination import PaginatedResponse
 router = APIRouter()
 
 
-AdminOrAgent = Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.AGENT))]
+StaffOnly = Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.AGENT))]
 AuthenticatedUser = Annotated[User, Depends(get_current_user)]
 
 
@@ -22,7 +23,7 @@ AuthenticatedUser = Annotated[User, Depends(get_current_user)]
 def create_customer(
     customer_data: CustomerCreate,
     db: Annotated[Session, Depends(get_db)],
-    current_user: AdminOrAgent,
+    current_user: StaffOnly,
 ) -> Customer:
     existing_customer = db.query(Customer).filter(Customer.email == customer_data.email).first()
     if existing_customer:
@@ -41,7 +42,7 @@ def create_customer(
 @router.get("/", response_model=PaginatedResponse[CustomerRead])
 def list_customers(
     db: Annotated[Session, Depends(get_db)],
-    current_user: AdminOrAgent,
+    current_user: StaffOnly,
     search: Annotated[str | None, Query(max_length=100)] = None,
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
@@ -80,7 +81,7 @@ def update_customer(
     customer_id: int,
     customer_data: CustomerUpdate,
     db: Annotated[Session, Depends(get_db)],
-    current_user: AdminOrAgent,
+    current_user: StaffOnly,
 ) -> Customer:
     customer = db.get(Customer, customer_id)
     if customer is None:
@@ -122,4 +123,10 @@ def get_customer_history(
         customer=customer,
         total_policies=len(customer.policies),
         total_documents=len(customer.documents),
+        total_applications=len(customer.applications),
+        pending_applications=sum(
+            application.status == PolicyApplicationStatus.PENDING
+            for application in customer.applications
+        ),
+        applications=sorted(customer.applications, key=lambda application: application.created_at, reverse=True),
     )

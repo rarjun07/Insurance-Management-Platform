@@ -1,29 +1,32 @@
-import { ArrowRight, ClipboardCheck, FileText, ShieldCheck, Users } from "lucide-react";
+import { ArrowRight, ClipboardCheck, FileText, ShieldCheck, UserRound, Users } from "lucide-react";
+import { BrandLockup } from "../components/BrandLockup";
 import { ComingSoonCard } from "../components/ComingSoonCard";
 import { policyTypes } from "../data/mockData";
+import type { PublicPlatformSummary } from "../types";
 
 type HomePageProps = {
   onLogin: () => void;
   onRegister: () => void;
+  summary: PublicPlatformSummary | null;
 };
 
-export function HomePage({ onLogin, onRegister }: HomePageProps) {
+export function HomePage({ onLogin, onRegister, summary }: HomePageProps) {
   return (
     <main className="home-page">
-      <nav className="home-nav">
-        <div className="brand compact">
-          <div className="brand-mark">H</div>
-          <div>
-            <p className="brand-title">HealthInsure</p>
-            <p className="brand-subtitle">Digital insurance platform</p>
-          </div>
-        </div>
+      <nav className="prime-auth-header home-topbar">
+        <button className="prime-brand" onClick={onLogin}>
+          <div className="prime-logo">H</div>
+          <BrandLockup />
+        </button>
         <div className="home-nav-actions">
-          <button className="secondary-button" onClick={onLogin}>
+          <button className="prime-outline" onClick={onLogin}>
             Login
           </button>
-          <button className="primary-button" onClick={onRegister}>
+          <button className="prime-blue" onClick={onRegister}>
             Register
+          </button>
+          <button className="prime-circle" onClick={onLogin}>
+            <UserRound size={24} />
           </button>
         </div>
       </nav>
@@ -31,7 +34,7 @@ export function HomePage({ onLogin, onRegister }: HomePageProps) {
       <section className="home-hero">
         <div>
           <p className="eyebrow">Health Insurance Management</p>
-          <h1>Modern insurance operations for customers, agents, and admins.</h1>
+          <h1>Modern health insurance operations for customers and admins.</h1>
           <p>
             A role-based web platform to manage health policies, premium payments, claim
             verification, customer documents, and reports.
@@ -53,15 +56,15 @@ export function HomePage({ onLogin, onRegister }: HomePageProps) {
           </div>
           <div className="home-mini-grid">
             <div>
-              <strong>85</strong>
+              <strong>{summary?.active_policies ?? "—"}</strong>
               <span>Active Policies</span>
             </div>
             <div>
-              <strong>14</strong>
+              <strong>{summary?.pending_claims ?? "—"}</strong>
               <span>Pending Claims</span>
             </div>
             <div>
-              <strong>₹2.4L</strong>
+              <strong>{summary ? `₹${Number(summary.total_collected_amount).toLocaleString("en-IN")}` : "—"}</strong>
               <span>Premiums</span>
             </div>
           </div>
@@ -96,6 +99,9 @@ export function HomePage({ onLogin, onRegister }: HomePageProps) {
           ))}
         </div>
       </section>
+      <footer className="home-section">
+        <p>Need help? Contact {summary?.support_email ?? "support@healthinsure.com"}.</p>
+      </footer>
     </main>
   );
 }

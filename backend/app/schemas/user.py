@@ -12,10 +12,13 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str = Field(min_length=8, max_length=128)
+    phone: str | None = Field(default=None, min_length=10, max_length=20)
+    address: str | None = Field(default=None, min_length=5, max_length=255)
 
 
 class UserRead(UserBase):
     id: int
+    profile_image_url: str | None = None
 
     model_config = {"from_attributes": True}
 

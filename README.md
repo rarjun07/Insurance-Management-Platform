@@ -39,6 +39,10 @@ This project uses PostgreSQL with SQLAlchemy and Alembic migrations.
 - Day 11: Validation and error handling standardized
 - Day 12: Backend smoke tests added
 - Day 13: Responsive frontend starter added
+- Day 14: Employee management, backend policy applications, document verification, settings management, profile update, and project handoff docs completed
+- Post-audit improvements: customer-only public signup, persisted application documents,
+  complete claim assignment/verification/settlement workflow, automatic expiry and overdue
+  refresh, PDF report export, and Render/Vercel deployment configuration
 
 ## Folders
 
@@ -46,6 +50,19 @@ This project uses PostgreSQL with SQLAlchemy and Alembic migrations.
 - `frontend/` - React frontend
 - `docs/` - project notes and daily planning
 
-## Next Step
+## Delivery Notes
 
-Day 14 will focus on deployment, documentation, and final presentation preparation.
+- Backend now supports `admin`, `agent`, and `customer` roles
+- Customer policy purchase now creates backend reviewable applications
+- Admin and agent can review applications and verify uploaded documents
+- Admin can manage employees and editable system settings
+- Customers can update their own profile
+- Application and claim documents are stored and linked to their workflow records
+- Claims support agent assignment, document verification, approval, and settlement
+- Admins can download a generated PDF business report
+- Frontend list screens include responsive pagination with filter-aware page resets
+
+## Handoff Docs
+
+- `docs/day-14-deployment-handoff.md`
+- `backend/README.md`

@@ -48,12 +48,16 @@ def require_roles(*allowed_roles: UserRole):
     return role_checker
 
 
-def is_admin_or_agent(user: User) -> bool:
+def is_admin(user: User) -> bool:
+    return user.role == UserRole.ADMIN
+
+
+def is_staff(user: User) -> bool:
     return user.role in {UserRole.ADMIN, UserRole.AGENT}
 
 
 def ensure_customer_access(user: User, customer_id: int) -> None:
-    if is_admin_or_agent(user):
+    if is_staff(user):
         return
     if user.role == UserRole.CUSTOMER and user.customer_id == customer_id:
         return
