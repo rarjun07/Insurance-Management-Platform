@@ -173,7 +173,7 @@ Admin Records Settlement
 
 ### Deployment
 
-- Render Blueprint for FastAPI, PostgreSQL, and persistent uploads
+- Render Blueprint for FastAPI and PostgreSQL
 - Vercel configuration for the React/Vite frontend
 
 ## Application Architecture
@@ -380,14 +380,18 @@ The build command performs TypeScript checking before generating the production 
 
 ### Backend and Database — Render
 
-The root [`render.yaml`](render.yaml) provisions:
+The root [`render.yaml`](render.yaml) provisions a free demo environment:
 
 - FastAPI web service
 - PostgreSQL database
-- Persistent upload disk
 - Database migrations and seed command
 
 Set `CORS_ORIGINS` to the deployed frontend URL.
+
+The free Render web service uses temporary filesystem storage. Uploaded documents and
+profile images can be removed when the service restarts or redeploys, and the free
+PostgreSQL database expires after Render's free-demo period. Upgrade the service and
+attach a persistent disk before using this configuration for long-term production data.
 
 ### Frontend — Vercel
 
@@ -479,7 +483,7 @@ See [`docs/day-14-deployment-handoff.md`](docs/day-14-deployment-handoff.md) for
 - Connected customer plan purchases to database applications
 - Completed document verification and policy generation
 - Completed claim assignment, verification, decisions, and settlement
-- Added profile images, business report export, and persistent uploads
+- Added profile images, business report export, and deployment-ready upload handling
 - Added Render and Vercel deployment configuration
 - Completed backend tests and deployment documentation
 

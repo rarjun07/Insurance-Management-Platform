@@ -54,10 +54,17 @@ Frontend optional `.env` value:
 
 Production configuration:
 
-- Root `render.yaml` provisions the backend, PostgreSQL database, and upload disk
+- Root `render.yaml` provisions a free demo backend and PostgreSQL database
 - `frontend/vercel.json` configures the Vite frontend and SPA rewrites
 - Set backend `CORS_ORIGINS` to the deployed Vercel URL
 - Set frontend `VITE_API_BASE_URL` to the deployed Render URL
+
+Free demo limitations:
+
+- Uploaded documents and profile images use temporary service storage and can be removed
+  after a restart or redeploy.
+- Upgrade the Render web service and attach a persistent disk for long-term file storage.
+- The free PostgreSQL database is intended only for a time-limited mentor demonstration.
 
 ## Seed Accounts
 
