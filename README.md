@@ -378,20 +378,20 @@ The build command performs TypeScript checking before generating the production 
 
 ## Deployment
 
-### Backend and Database — Render
+### Backend — Render, Database — PostgreSQL
 
 The root [`render.yaml`](render.yaml) provisions a free demo environment:
 
 - FastAPI web service
-- PostgreSQL database
 - Database migrations and seed command
 
-Set `CORS_ORIGINS` to the deployed frontend URL.
+Set `DATABASE_URL` to an external PostgreSQL connection string (for example, a free
+Neon database) and set `CORS_ORIGINS` to the deployed frontend URL.
 
 The free Render web service uses temporary filesystem storage. Uploaded documents and
-profile images can be removed when the service restarts or redeploys, and the free
-PostgreSQL database expires after Render's free-demo period. Upgrade the service and
-attach a persistent disk before using this configuration for long-term production data.
+profile images can be removed when the service restarts or redeploys. Upgrade the
+service and attach a persistent disk before using this configuration for long-term
+production data.
 
 ### Frontend — Vercel
 
