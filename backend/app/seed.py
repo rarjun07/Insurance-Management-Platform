@@ -82,7 +82,7 @@ def seed_database() -> None:
         db.add_all(users)
         db.flush()
 
-        plans = [
+        plan_defaults = [
             InsurancePlan(
                 name="Silver Health",
                 premium_amount=Decimal("8000.00"),
@@ -117,7 +117,13 @@ def seed_database() -> None:
                 exclusions=["Listed disease waiting period", "Non-medical hospital expenses"],
             ),
         ]
-        db.add_all(plans)
+        plans = []
+        for plan_default in plan_defaults:
+            plan = db.query(InsurancePlan).filter(InsurancePlan.name == plan_default.name).first()
+            if plan is None:
+                db.add(plan_default)
+                plan = plan_default
+            plans.append(plan)
         db.flush()
 
         policies = [
