@@ -9,13 +9,15 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
 from app.core.config import settings
+from jose import JWTError, jwt
+
 from app.core.security import create_access_token, hash_password, verify_password
 from app.db.session import get_db
 from app.models.customer import Customer
 from app.models.system_setting import SystemSetting
 from app.models.user import User, UserRole
 from app.schemas.profile import ProfileUpdate
-from app.schemas.user import Token, UserCreate, UserRead
+from app.schemas.user import PasswordResetConfirm, PasswordResetRequest, PasswordResetRequestResponse, Token, UserCreate, UserRead
 
 router = APIRouter()
 
@@ -25,6 +27,7 @@ ALLOWED_PROFILE_IMAGE_TYPES = {
     "image/webp": ".webp",
 }
 MAX_PROFILE_IMAGE_BYTES = 5 * 1024 * 1024
+PASSWORD_RESET_MESSAGE = "If an account exists for this email, password reset instructions are ready."
 
 
 @router.get("/status")
@@ -188,6 +191,51 @@ def login_user(
         claims={"role": user.role.value, "customer_id": user.customer_id},
     )
     return Token(access_token=access_token)
+
+
+@router.post("/forgot-password", response_model=PasswordResetRequestResponse)
+def request_password_reset(
+    payload: PasswordResetRequest,
+    db: Annotated[Session, Depends(get_db)],
+) -> PasswordResetRequestResponse:
+    user = db.query(User).filter(User.email == payload.email).first()
+    if user is None:
+        return PasswordResetRequestResponse(message=PASSWORD_RESET_MESSAGE)
+
+    reset_token = create_access_token(subject=user.email, claims={"purpose": "password_reset"})
+    return PasswordResetRequestResponse(message=PASSWORD_RESET_MESSAGE, reset_token=reset_token)
+
+
+@router.post("/reset-password")
+def reset_password(
+    payload: PasswordResetConfirm,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict[str, str]:
+    try:
+        token_payload = jwt.decode(payload.token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    except JWTError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password reset link is invalid or expired.",
+        ) from exc
+
+    if token_payload.get("purpose") != "password_reset":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password reset link is invalid or expired.",
+        )
+
+    email = token_payload.get("sub")
+    user = db.query(User).filter(User.email == email).first()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password reset link is invalid or expired.",
+        )
+
+    user.hashed_password = hash_password(payload.password)
+    db.commit()
+    return {"message": "Password updated successfully. You can now log in with your new password."}
 
 
 @router.get("/me", response_model=UserRead)

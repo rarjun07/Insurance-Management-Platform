@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { FileText, Lock, Mail, RotateCw, ShieldCheck, UserRound } from "lucide-react";
 import { BrandLockup } from "../components/BrandLockup";
+import { requestPasswordReset, resetPassword } from "../services/api";
 
 type LoginPageProps = {
   error: string;
@@ -15,7 +16,13 @@ export function LoginPage({ error, onBackHome, onGoRegister, onLogin }: LoginPag
   const [captchaCode, setCaptchaCode] = useState(() => generateCaptcha());
   const [captcha, setCaptcha] = useState("");
   const [captchaError, setCaptchaError] = useState("");
-  const [resetNotice, setResetNotice] = useState("");
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetPasswordValue, setResetPasswordValue] = useState("");
+  const [resetToken, setResetToken] = useState("");
+  const [resetMessage, setResetMessage] = useState("");
+  const [resetError, setResetError] = useState("");
+  const [isResetOpen, setIsResetOpen] = useState(false);
+  const [isResetSubmitting, setIsResetSubmitting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const emailError = email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? "Enter a valid email address." : "";
   const friendlyError = useMemo(() => {
@@ -31,7 +38,6 @@ export function LoginPage({ error, onBackHome, onGoRegister, onLogin }: LoginPag
       setEmail("");
       setPassword("");
       setCaptcha("");
-      setResetNotice("");
     }, 100);
 
     return () => window.clearTimeout(clearSavedBrowserValues);
@@ -55,6 +61,54 @@ export function LoginPage({ error, onBackHome, onGoRegister, onLogin }: LoginPag
       await onLogin(email, password);
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function submitResetRequest() {
+    const resetEmailError = resetEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(resetEmail)
+      ? "Enter a valid email address."
+      : "";
+    if (!resetEmail || resetEmailError) {
+      setResetError(resetEmailError || "Enter your registered email address.");
+      return;
+    }
+
+    setIsResetSubmitting(true);
+    setResetError("");
+    setResetMessage("");
+    try {
+      const response = await requestPasswordReset(resetEmail);
+      setResetMessage(response.message);
+      setResetToken(response.reset_token ?? "");
+    } catch (resetRequestError) {
+      setResetError(resetRequestError instanceof Error ? resetRequestError.message : "Could not start password reset.");
+    } finally {
+      setIsResetSubmitting(false);
+    }
+  }
+
+  async function submitNewPassword() {
+    if (!resetToken) {
+      setResetError("Password reset link is not available. Request a new reset first.");
+      return;
+    }
+    if (resetPasswordValue.length < 8) {
+      setResetError("Password must be at least 8 characters.");
+      return;
+    }
+
+    setIsResetSubmitting(true);
+    setResetError("");
+    try {
+      const response = await resetPassword(resetToken, resetPasswordValue);
+      setResetMessage(response.message);
+      setPassword("");
+      setResetPasswordValue("");
+      setResetToken("");
+    } catch (resetConfirmError) {
+      setResetError(resetConfirmError instanceof Error ? resetConfirmError.message : "Could not update password.");
+    } finally {
+      setIsResetSubmitting(false);
     }
   }
 
@@ -116,13 +170,17 @@ export function LoginPage({ error, onBackHome, onGoRegister, onLogin }: LoginPag
                 className="forgot-password-link"
                 type="button"
                 onClick={() => {
-                  setResetNotice("Password reset is handled by the administrator in this demo. Please contact the admin to update your password.");
+                  setResetEmail(email);
+                  setResetPasswordValue("");
+                  setResetToken("");
+                  setResetMessage("");
+                  setResetError("");
+                  setIsResetOpen(true);
                 }}
               >
                 Forgot password?
               </button>
             </div>
-            {resetNotice ? <p className="reset-notice">{resetNotice}</p> : null}
             <label>
               <span><ShieldCheck size={16} /> Captcha</span>
               <div className="captcha-row">
@@ -160,6 +218,58 @@ export function LoginPage({ error, onBackHome, onGoRegister, onLogin }: LoginPag
           </div>
         </section>
       </section>
+      {isResetOpen ? (
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="reset-password-title">
+          <section className="modal-card reset-password-modal">
+            <div className="modal-header">
+              <div>
+                <p className="auth-kicker">Account recovery</p>
+                <h2 id="reset-password-title">Reset password</h2>
+              </div>
+              <button className="text-button" type="button" onClick={() => setIsResetOpen(false)}>
+                Close
+              </button>
+            </div>
+
+            <div className="modal-form">
+              <label>
+                <span><Mail size={16} /> Registered email</span>
+                <input
+                  autoComplete="email"
+                  type="email"
+                  value={resetEmail}
+                  onChange={(event) => setResetEmail(event.target.value.toLowerCase().replace(/\s+/g, ""))}
+                  placeholder="Enter registered email"
+                />
+              </label>
+              <button className="secondary-button" type="button" onClick={submitResetRequest} disabled={isResetSubmitting}>
+                {isResetSubmitting ? "Checking..." : "Send reset link"}
+              </button>
+
+              {resetToken ? (
+                <>
+                  <label>
+                    <span><Lock size={16} /> New password</span>
+                    <input
+                      autoComplete="new-password"
+                      type="password"
+                      value={resetPasswordValue}
+                      onChange={(event) => setResetPasswordValue(event.target.value)}
+                      placeholder="Enter new password"
+                    />
+                  </label>
+                  <button className="prime-submit compact-submit" type="button" onClick={submitNewPassword} disabled={isResetSubmitting}>
+                    {isResetSubmitting ? "Updating..." : "Update password"}
+                  </button>
+                </>
+              ) : null}
+
+              {resetMessage ? <p className="success-message">{resetMessage}</p> : null}
+              {resetError ? <p className="error-message">{resetError}</p> : null}
+            </div>
+          </section>
+        </div>
+      ) : null}
     </main>
   );
 }

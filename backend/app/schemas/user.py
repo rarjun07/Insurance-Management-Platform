@@ -31,3 +31,17 @@ class Token(BaseModel):
 class TokenPayload(BaseModel):
     sub: str
     role: UserRole
+
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetRequestResponse(BaseModel):
+    message: str
+    reset_token: str | None = None
+
+
+class PasswordResetConfirm(BaseModel):
+    token: str = Field(min_length=20)
+    password: str = Field(min_length=8, max_length=128)

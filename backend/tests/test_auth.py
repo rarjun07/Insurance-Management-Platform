@@ -37,6 +37,45 @@ def test_register_login_and_current_user(client):
     assert me_response.json()["role"] == "customer"
 
 
+def test_forgot_password_resets_password(client):
+    register_response = client.post(
+        "/api/v1/auth/register",
+        json={
+            "name": "Reset Customer",
+            "email": "reset.customer@example.com",
+            "password": "password123",
+            "role": "customer",
+        },
+    )
+    assert register_response.status_code == 201
+
+    reset_request = client.post(
+        "/api/v1/auth/forgot-password",
+        json={"email": "reset.customer@example.com"},
+    )
+    assert reset_request.status_code == 200
+    reset_token = reset_request.json()["reset_token"]
+    assert reset_token
+
+    reset_response = client.post(
+        "/api/v1/auth/reset-password",
+        json={"token": reset_token, "password": "new-password123"},
+    )
+    assert reset_response.status_code == 200
+
+    old_login_response = client.post(
+        "/api/v1/auth/login",
+        data={"username": "reset.customer@example.com", "password": "password123"},
+    )
+    assert old_login_response.status_code == 401
+
+    new_login_response = client.post(
+        "/api/v1/auth/login",
+        data={"username": "reset.customer@example.com", "password": "new-password123"},
+    )
+    assert new_login_response.status_code == 200
+
+
 def test_public_register_cannot_create_admin_account(client):
     response = client.post(
         "/api/v1/auth/register",
