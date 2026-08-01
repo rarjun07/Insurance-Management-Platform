@@ -15,6 +15,7 @@ export function LoginPage({ error, onBackHome, onGoRegister, onLogin }: LoginPag
   const [captchaCode, setCaptchaCode] = useState(() => generateCaptcha());
   const [captcha, setCaptcha] = useState("");
   const [captchaError, setCaptchaError] = useState("");
+  const [resetNotice, setResetNotice] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const emailError = email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? "Enter a valid email address." : "";
   const friendlyError = useMemo(() => {
@@ -30,6 +31,7 @@ export function LoginPage({ error, onBackHome, onGoRegister, onLogin }: LoginPag
       setEmail("");
       setPassword("");
       setCaptcha("");
+      setResetNotice("");
     }, 100);
 
     return () => window.clearTimeout(clearSavedBrowserValues);
@@ -109,6 +111,18 @@ export function LoginPage({ error, onBackHome, onGoRegister, onLogin }: LoginPag
                 placeholder="Enter password"
               />
             </label>
+            <div className="login-help-row">
+              <button
+                className="forgot-password-link"
+                type="button"
+                onClick={() => {
+                  setResetNotice("Password reset is handled by the administrator in this demo. Please contact the admin to update your password.");
+                }}
+              >
+                Forgot password?
+              </button>
+            </div>
+            {resetNotice ? <p className="reset-notice">{resetNotice}</p> : null}
             <label>
               <span><ShieldCheck size={16} /> Captcha</span>
               <div className="captcha-row">

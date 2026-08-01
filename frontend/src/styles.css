@@ -3158,6 +3158,38 @@ td {
   font-weight: 800;
 }
 
+.login-help-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -8px;
+}
+
+.forgot-password-link {
+  border: 0;
+  background: transparent;
+  color: #0f766e;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 900;
+  padding: 0;
+}
+
+.forgot-password-link:hover {
+  text-decoration: underline;
+}
+
+.reset-notice {
+  border: 1px solid #bae6fd;
+  border-radius: 14px;
+  background: #f0f9ff;
+  color: #075985;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.5;
+  margin: -4px 0 0;
+  padding: 12px 14px;
+}
+
 .prime-submit {
   border: 0;
   border-radius: 18px;
