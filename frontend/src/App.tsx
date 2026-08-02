@@ -175,6 +175,7 @@ export function App() {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isBootstrapping, setIsBootstrapping] = useState(() => Boolean(getStoredToken()));
   const hasSyncedHistory = useRef(false);
   const hasLoadedPublicData = useRef(false);
 
@@ -280,6 +281,7 @@ export function App() {
   useEffect(() => {
     async function restoreSession() {
       if (!token) {
+        setIsBootstrapping(false);
         return;
       }
       try {
@@ -293,6 +295,8 @@ export function App() {
         clearStoredToken();
         setToken(null);
         setCurrentUser(null);
+      } finally {
+        setIsBootstrapping(false);
       }
     }
 
@@ -453,6 +457,10 @@ export function App() {
   }
 
   const authenticatedUser = currentUser;
+
+  if (isBootstrapping) {
+    return <BootstrapScreen />;
+  }
 
   function renderPage() {
     if (activePage === "dashboard") {
@@ -755,6 +763,18 @@ export function App() {
         />
       ) : null}
     </AppLayout>
+  );
+}
+
+function BootstrapScreen() {
+  return (
+    <main className="auth-screen bootstrap-screen">
+      <section className="prime-auth-card boot-card">
+        <p className="auth-kicker">Health Insurance Platform</p>
+        <h2>Loading your account</h2>
+        <p className="form-note">Checking your saved session and opening the correct workspace.</p>
+      </section>
+    </main>
   );
 }
 
