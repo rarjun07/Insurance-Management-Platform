@@ -33,7 +33,7 @@ export function RegisterPage({ error, onBackHome, onGoLogin, onRegister }: Regis
   const [isSubmitting, setIsSubmitting] = useState(false);
   const emailError = registerForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registerForm.email) ? "Enter a valid email address." : "";
   const phoneError = registerForm.phone && !/^\d{10}$/.test(registerForm.phone) ? "Phone number must be exactly 10 digits." : "";
-  const hasValidationErrors = Boolean(emailError || phoneError || profileImageError || !profileImage);
+  const hasValidationErrors = Boolean(emailError || phoneError || profileImageError);
   const friendlyError = useMemo(() => {
     if (!error) return "";
     if (error.includes("Failed to fetch") || error.includes("NetworkError")) {
@@ -135,7 +135,7 @@ export function RegisterPage({ error, onBackHome, onGoLogin, onRegister }: Regis
                 const selectedFile = event.target.files?.[0] ?? null;
                 if (!selectedFile) {
                   setProfileImage(null);
-                  setProfileImageError("Select a profile image.");
+                  setProfileImageError("");
                   return;
                 }
                 if (!["image/jpeg", "image/png", "image/webp"].includes(selectedFile.type)) {
@@ -210,7 +210,7 @@ export function RegisterPage({ error, onBackHome, onGoLogin, onRegister }: Regis
               placeholder="Address"
             />
             <p className="form-note">
-              Customer signup creates a profile automatically or securely links an existing profile with the same email.
+              Profile image is optional. You can add or update it later from My Account.
             </p>
             <button className="prime-submit" onClick={submitRegister} disabled={isSubmitting || hasValidationErrors}>
               {isSubmitting ? "Creating account..." : "Create Account"}

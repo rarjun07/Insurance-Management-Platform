@@ -394,8 +394,18 @@ export function App() {
 
   async function handleRegister(payload: Parameters<typeof registerUser>[0]) {
     setError("");
-    await registerUser(payload);
-    setAuthScreen("login");
+    try {
+      await registerUser(payload);
+      setAuthScreen("login");
+    } catch (caughtError) {
+      const message = caughtError instanceof Error ? caughtError.message : "Unable to create account";
+      if (message.toLowerCase().includes("already registered")) {
+        setError("An account with this email already exists. Please log in instead.");
+        setAuthScreen("login");
+        return;
+      }
+      setError(message);
+    }
   }
 
   function handleLogout() {
