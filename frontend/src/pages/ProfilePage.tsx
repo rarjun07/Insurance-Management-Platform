@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { UserRound } from "lucide-react";
 
 import { StatusBadge } from "../components/StatusBadge";
 import { getMediaUrl } from "../services/api";
@@ -14,6 +15,7 @@ type ProfilePageProps = {
     password?: string;
     phone?: string;
     address?: string;
+    profile_image?: File | null;
   }) => Promise<void>;
 };
 
@@ -25,21 +27,36 @@ export function ProfilePage({ user, customer, onLogout, onSave }: ProfilePagePro
     address: customer?.address ?? "",
     password: "",
   });
+  const [profileImage, setProfileImage] = useState<File | null>(null);
+  const [profilePreview, setProfilePreview] = useState("");
+  const [profileImageError, setProfileImageError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const profileImageUrl = getMediaUrl(user.profile_image_url);
+  const visibleProfileImage = profilePreview || profileImageUrl;
 
   const roleLabel = user.role === "admin" ? "Admin" : user.role === "agent" ? "Agent" : "Customer";
   const emailError = values.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email) ? "Enter a valid email address." : "";
   const phoneError = values.phone && !/^\d{10}$/.test(values.phone) ? "Phone number must be exactly 10 digits." : "";
   const passwordError = values.password && values.password.length < 8 ? "Password must be at least 8 characters." : "";
-  const hasValidationErrors = Boolean(emailError || phoneError || passwordError);
+  const hasValidationErrors = Boolean(emailError || phoneError || passwordError || profileImageError);
   const permissionsLabel = useMemo(() => {
     if (user.role === "customer") return "Own records only";
     if (user.role === "agent") return "Operational modules";
     return "Full platform access";
   }, [user.role]);
+
+  useEffect(() => {
+    if (!profileImage) {
+      setProfilePreview("");
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(profileImage);
+    setProfilePreview(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [profileImage]);
 
   async function submitProfile() {
     if (hasValidationErrors) return;
@@ -54,8 +71,11 @@ export function ProfilePage({ user, customer, onLogout, onSave }: ProfilePagePro
         phone: values.phone || undefined,
         address: values.address || undefined,
         password: values.password || undefined,
+        profile_image: profileImage,
       });
       setValues((currentValues) => ({ ...currentValues, password: "" }));
+      setProfileImage(null);
+      setProfileImageError("");
       setSuccessMessage("Profile updated successfully.");
     } catch (caughtError) {
       setErrorMessage(caughtError instanceof Error ? caughtError.message : "Unable to update profile.");
@@ -67,9 +87,9 @@ export function ProfilePage({ user, customer, onLogout, onSave }: ProfilePagePro
   return (
     <section className="panel page-panel">
       <div className="profile-header">
-        <div className={`profile-avatar ${profileImageUrl ? "has-profile-image" : ""}`}>
-          {profileImageUrl ? (
-            <img src={profileImageUrl} alt={`${user.name} profile`} />
+        <div className={`profile-avatar ${visibleProfileImage ? "has-profile-image" : ""}`}>
+          {visibleProfileImage ? (
+            <img src={visibleProfileImage} alt={`${user.name} profile`} />
           ) : (
             user.name.slice(0, 2).toUpperCase()
           )}
@@ -104,6 +124,44 @@ export function ProfilePage({ user, customer, onLogout, onSave }: ProfilePagePro
       <div className="modal-form profile-form">
         {errorMessage ? <p className="error-message">{errorMessage}</p> : null}
         {successMessage ? <p className="success-message">{successMessage}</p> : null}
+        {profileImageError ? <p className="field-error">{profileImageError}</p> : null}
+
+        <label className={`upload-avatar profile-image-picker ${visibleProfileImage ? "has-image" : ""}`}>
+          {visibleProfileImage ? (
+            <img src={visibleProfileImage} alt="Selected profile preview" />
+          ) : (
+            <>
+              <UserRound size={38} />
+              <strong>Profile image</strong>
+              <small>JPG, PNG or WebP · max 5 MB</small>
+            </>
+          )}
+          <span className="upload-avatar-action">{visibleProfileImage ? "Change photo" : "Choose photo"}</span>
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={(event) => {
+              const selectedFile = event.target.files?.[0] ?? null;
+              if (!selectedFile) {
+                setProfileImage(null);
+                setProfileImageError("");
+                return;
+              }
+              if (!["image/jpeg", "image/png", "image/webp"].includes(selectedFile.type)) {
+                setProfileImage(null);
+                setProfileImageError("Profile image must be JPG, PNG, or WebP.");
+                return;
+              }
+              if (selectedFile.size > 5 * 1024 * 1024) {
+                setProfileImage(null);
+                setProfileImageError("Profile image must be 5 MB or smaller.");
+                return;
+              }
+              setProfileImage(selectedFile);
+              setProfileImageError("");
+            }}
+          />
+        </label>
 
         <label>
           Full Name

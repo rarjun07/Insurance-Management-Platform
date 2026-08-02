@@ -143,11 +143,21 @@ export function updateMe(token: string, payload: {
   password?: string;
   phone?: string;
   address?: string;
+  profile_image?: File | null;
 }) {
+  const formData = new FormData();
+  if (payload.name !== undefined) formData.set("name", payload.name);
+  if (payload.email !== undefined) formData.set("email", payload.email);
+  if (payload.password !== undefined) formData.set("password", payload.password);
+  if (payload.phone !== undefined) formData.set("phone", payload.phone);
+  if (payload.address !== undefined) formData.set("address", payload.address);
+  if (payload.profile_image) formData.set("profile_image", payload.profile_image);
+
   return apiRequest<AppUser>("/api/v1/auth/me", {
     method: "PATCH",
     token,
-    body: JSON.stringify(payload),
+    body: formData,
+    isFormData: true,
   });
 }
 

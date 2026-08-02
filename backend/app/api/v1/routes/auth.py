@@ -1,11 +1,12 @@
-from typing import Annotated
 from pathlib import Path
 from uuid import uuid4
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import EmailStr
 from sqlalchemy.orm import Session
+from starlette.datastructures import UploadFile as StarletteUploadFile
 
 from app.api.dependencies import get_current_user
 from app.core.config import settings
@@ -96,6 +97,34 @@ def save_profile_image(profile_image: UploadFile) -> str:
     storage_path.parent.mkdir(parents=True, exist_ok=True)
     storage_path.write_bytes(image_bytes)
     return relative_path.as_posix()
+
+
+def delete_profile_image(image_path: str | None) -> None:
+    if not image_path:
+        return
+
+    storage_path = Path(settings.UPLOAD_DIR) / image_path
+    storage_path.unlink(missing_ok=True)
+
+
+async def parse_profile_update(request: Request) -> tuple[ProfileUpdate, UploadFile | None]:
+    content_type = request.headers.get("content-type", "")
+    if content_type.startswith("multipart/form-data") or content_type.startswith("application/x-www-form-urlencoded"):
+        form = await request.form()
+        profile_image = form.get("profile_image")
+        return (
+            ProfileUpdate(
+                name=form.get("name"),
+                email=form.get("email"),
+                password=form.get("password"),
+                phone=form.get("phone"),
+                address=form.get("address"),
+            ),
+            profile_image if isinstance(profile_image, StarletteUploadFile) else None,
+        )
+
+    payload = await request.json()
+    return ProfileUpdate.model_validate(payload), None
 
 
 def has_valid_image_signature(image_bytes: bytes, extension: str) -> bool:
@@ -244,13 +273,16 @@ def read_current_user(current_user: Annotated[User, Depends(get_current_user)]) 
 
 
 @router.patch("/me", response_model=UserRead)
-def update_my_profile(
-    payload: ProfileUpdate,
+async def update_my_profile(
+    request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> User:
-    update_data = payload.model_dump(exclude_unset=True)
+    payload, profile_image = await parse_profile_update(request)
+    update_data = payload.model_dump(exclude_unset=True, exclude_none=True)
     customer = db.get(Customer, current_user.customer_id) if current_user.customer_id is not None else None
+    previous_profile_image_path = current_user.profile_image_path
+    new_profile_image_path: str | None = None
 
     if "email" in update_data:
         existing = db.query(User).filter(User.email == update_data["email"], User.id != current_user.id).first()
@@ -274,6 +306,20 @@ def update_my_profile(
         if "address" in update_data:
             customer.address = update_data.pop("address")
 
-    db.commit()
+    if profile_image is not None:
+        new_profile_image_path = save_profile_image(profile_image)
+        current_user.profile_image_path = new_profile_image_path
+
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        if new_profile_image_path is not None:
+            delete_profile_image(new_profile_image_path)
+        raise
+
+    if previous_profile_image_path and previous_profile_image_path != current_user.profile_image_path:
+        delete_profile_image(previous_profile_image_path)
+
     db.refresh(current_user)
     return current_user

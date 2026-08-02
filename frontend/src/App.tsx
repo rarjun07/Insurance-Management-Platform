@@ -176,6 +176,7 @@ export function App() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const hasSyncedHistory = useRef(false);
+  const hasLoadedPublicData = useRef(false);
 
   const isCustomer = currentUser?.role === "customer";
   const isAdmin = currentUser?.role === "admin";
@@ -183,6 +184,12 @@ export function App() {
   const canManage = isStaff;
 
   useEffect(() => {
+    if (currentUser || hasLoadedPublicData.current) {
+      return;
+    }
+
+    hasLoadedPublicData.current = true;
+
     async function loadPublicData() {
       try {
         const [summary, activePlans] = await Promise.all([
@@ -281,7 +288,7 @@ export function App() {
           throw new Error("This frontend supports only Admin, Agent, and Customer accounts.");
         }
         setCurrentUser(user);
-        await loadWorkspace(token, user);
+        void loadWorkspace(token, user);
       } catch {
         clearStoredToken();
         setToken(null);
@@ -328,7 +335,7 @@ export function App() {
   }, [activePage, authScreen, currentUser]);
 
   useEffect(() => {
-    if (!token || !currentUser || isCustomer) {
+    if (!token || !currentUser || isCustomer || !search.trim()) {
       return;
     }
 
@@ -378,7 +385,7 @@ export function App() {
     }
     setCurrentUser(user);
     setAuthScreen("home");
-    await loadWorkspace(loginResponse.access_token, user);
+    void loadWorkspace(loginResponse.access_token, user);
   }
 
   async function handleRegister(payload: Parameters<typeof registerUser>[0]) {
@@ -698,7 +705,7 @@ export function App() {
             await updateMe(token, payload);
             const refreshedUser = await getMe(token);
             setCurrentUser(refreshedUser);
-            await loadWorkspace(token, refreshedUser);
+            void loadWorkspace(token, refreshedUser);
           }}
         />
       );

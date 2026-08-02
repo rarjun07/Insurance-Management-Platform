@@ -3101,6 +3101,10 @@ td {
   margin-top: 22px;
 }
 
+.profile-image-picker {
+  margin: 0 0 8px;
+}
+
 .captcha-row {
   display: grid;
   grid-template-columns: 160px 58px 1fr;

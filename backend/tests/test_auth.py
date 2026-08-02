@@ -171,3 +171,49 @@ def test_profile_image_upload_rejects_fake_image(client):
     )
 
     assert response.status_code == 400
+
+
+def test_profile_update_can_replace_profile_image(client, tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "UPLOAD_DIR", str(tmp_path))
+
+    register_response = client.post(
+        "/api/v1/auth/register",
+        json={
+            "name": "Image Update Customer",
+            "email": "image.update@example.com",
+            "password": "password123",
+            "role": "customer",
+        },
+    )
+    assert register_response.status_code == 201
+
+    login_response = client.post(
+        "/api/v1/auth/login",
+        data={
+            "username": "image.update@example.com",
+            "password": "password123",
+        },
+    )
+    token = login_response.json()["access_token"]
+
+    update_response = client.patch(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {token}"},
+        data={
+            "name": "Image Update Customer",
+            "email": "image.update@example.com",
+        },
+        files={
+            "profile_image": (
+                "profile.webp",
+                b"RIFF1234WEBPprofile-image-test",
+                "image/webp",
+            ),
+        },
+    )
+
+    assert update_response.status_code == 200
+    profile_image_url = update_response.json()["profile_image_url"]
+    assert profile_image_url.startswith("/uploads/profiles/")
+    stored_path = Path(settings.UPLOAD_DIR) / profile_image_url.removeprefix("/uploads/")
+    assert stored_path.exists()
