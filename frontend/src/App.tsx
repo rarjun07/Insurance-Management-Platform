@@ -702,8 +702,7 @@ export function App() {
           onLogout={handleLogout}
           onSave={async (payload) => {
             if (!token) return;
-            await updateMe(token, payload);
-            const refreshedUser = await getMe(token);
+            const refreshedUser = await updateMe(token, payload);
             setCurrentUser(refreshedUser);
             void loadWorkspace(token, refreshedUser);
           }}
