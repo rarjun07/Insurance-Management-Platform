@@ -2152,6 +2152,28 @@ td {
   font-weight: 800;
 }
 
+.date-of-birth-field {
+  display: grid;
+  gap: 8px;
+  color: #475569;
+  font-weight: 800;
+}
+
+.date-of-birth-grid {
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr 1fr;
+  gap: 10px;
+}
+
+.date-of-birth-grid select {
+  width: 100%;
+  border: 1px solid #dbe4ef;
+  border-radius: 14px;
+  padding: 13px 14px;
+  color: #102033;
+  font: inherit;
+}
+
 .input-invalid {
   border-color: #fca5a5 !important;
   background: #fff5f5 !important;

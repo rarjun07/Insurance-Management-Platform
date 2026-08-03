@@ -930,6 +930,44 @@ function formatMoney(value: string | number) {
   return `₹${Number(value).toLocaleString("en-IN")}`;
 }
 
+function splitIsoDate(value: string | undefined) {
+  if (!value) {
+    return ["", "", ""] as const;
+  }
+  const [year = "", month = "", day = ""] = value.split("-");
+  return [year, month, day] as const;
+}
+
+function getDaysInMonth(year: number, month: number) {
+  if (!year || !month) {
+    return 31;
+  }
+  return new Date(year, month, 0).getDate();
+}
+
+function clampDay(day: string, maxDay: number) {
+  const parsedDay = Number(day);
+  if (!parsedDay) {
+    return "";
+  }
+  return String(Math.min(parsedDay, maxDay)).padStart(2, "0");
+}
+
+const MONTH_LABELS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
 function formatPlanPremium(plan: InsurancePlan) {
   return `${formatMoney(plan.premium_amount)}/year`;
 }
@@ -1417,7 +1455,7 @@ function ApplicationWizard({ plan, customer, user, onClose, onSubmitted }: { pla
         {step === 1 ? (
           <div className="modal-form">
             <Input label="Full Name" name="name" values={values} setValues={(nextValues) => setValues(nextValues as typeof values)} />
-            <Input label="Date of Birth" name="dob" type="date" values={values} setValues={(nextValues) => setValues(nextValues as typeof values)} />
+            <DateOfBirthInput label="Date of Birth" name="dob" values={values} setValues={(nextValues) => setValues(nextValues as typeof values)} />
             <Select label="Gender" name="gender" values={values} setValues={(nextValues) => setValues(nextValues as typeof values)} options={[{ label: "Male", value: "Male" }, { label: "Female", value: "Female" }, { label: "Other", value: "Other" }]} />
             <Select label="Marital Status" name="maritalStatus" values={values} setValues={(nextValues) => setValues(nextValues as typeof values)} options={[{ label: "Single", value: "Single" }, { label: "Married", value: "Married" }]} />
             <Input label="Occupation" name="occupation" values={values} setValues={(nextValues) => setValues(nextValues as typeof values)} />
@@ -3123,7 +3161,7 @@ function RecordModal({ form, token, currentUser, selectedCustomer, selectedEmplo
                 setValues={setValues}
               />
               <Input label="Address" name="address" values={values} setValues={setValues} />
-              <Input label="Date of Birth" name="dob" type="date" values={values} setValues={setValues} />
+              <DateOfBirthInput label="Date of Birth" name="dob" values={values} setValues={setValues} />
             </>
           ) : null}
           {form === "policy" ? (
@@ -3300,6 +3338,64 @@ function Input({
         value={values[name] ?? ""}
         onChange={(event) => setValues({ ...values, [name]: getNextValue(event.target.value) })}
       />
+      {error ? <span className="field-error">{error}</span> : null}
+    </label>
+  );
+}
+
+function DateOfBirthInput({
+  label,
+  name,
+  values,
+  setValues,
+  error,
+}: {
+  label: string;
+  name: string;
+  values: Record<string, string>;
+  setValues: (values: Record<string, string>) => void;
+  error?: string;
+}) {
+  const currentYear = new Date().getFullYear();
+  const minYear = currentYear - 120;
+  const [year = "", month = "", day = ""] = splitIsoDate(values[name]);
+  const dayCount = getDaysInMonth(Number(year), Number(month));
+
+  function updateDate(nextParts: Partial<{ year: string; month: string; day: string }>) {
+    const nextYear = nextParts.year ?? year;
+    const nextMonth = nextParts.month ?? month;
+    const nextDay = nextParts.day ?? day;
+    const maxDay = getDaysInMonth(Number(nextYear), Number(nextMonth));
+    const normalizedDay = clampDay(nextDay, maxDay);
+    const nextValue = nextYear && nextMonth && normalizedDay ? `${nextYear}-${nextMonth}-${normalizedDay}` : "";
+    setValues({ ...values, [name]: nextValue });
+  }
+
+  return (
+    <label className="date-of-birth-field">
+      {label}
+      <div className="date-of-birth-grid">
+        <select className={error ? "input-invalid" : ""} value={day} onChange={(event) => updateDate({ day: event.target.value })}>
+          <option value="">Day</option>
+          {Array.from({ length: dayCount || 31 }, (_, index) => {
+            const option = String(index + 1).padStart(2, "0");
+            return <option key={option} value={option}>{option}</option>;
+          })}
+        </select>
+        <select className={error ? "input-invalid" : ""} value={month} onChange={(event) => updateDate({ month: event.target.value })}>
+          <option value="">Month</option>
+          {MONTH_LABELS.map((monthLabel, index) => {
+            const option = String(index + 1).padStart(2, "0");
+            return <option key={option} value={option}>{monthLabel}</option>;
+          })}
+        </select>
+        <select className={error ? "input-invalid" : ""} value={year} onChange={(event) => updateDate({ year: event.target.value })}>
+          <option value="">Year</option>
+          {Array.from({ length: currentYear - minYear + 1 }, (_, index) => String(currentYear - index)).map((option) => (
+            <option key={option} value={option}>{option}</option>
+          ))}
+        </select>
+      </div>
       {error ? <span className="field-error">{error}</span> : null}
     </label>
   );
