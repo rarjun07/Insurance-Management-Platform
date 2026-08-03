@@ -184,7 +184,7 @@ export function AppLayout({
             ) : null}
           </div>
           <div className="topbar-actions">
-            <span className="badge">{roleLabels[currentUser.role]}</span>
+            <span className="badge">{currentUser.name}</span>
             <div className="profile-menu-wrap">
               <button
                 className={`user-pill clickable ${profileImageUrl ? "has-profile-image" : ""}`}
