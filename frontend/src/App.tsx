@@ -3369,8 +3369,6 @@ function DateOfBirthInput({
   setValues: (values: Record<string, string>) => void;
   error?: string;
 }) {
-  const currentYear = new Date().getFullYear();
-  const minYear = currentYear - 120;
   const [selectedYear, setSelectedYear] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("");
   const [selectedDay, setSelectedDay] = useState("");
@@ -3381,7 +3379,7 @@ function DateOfBirthInput({
     setSelectedYear(year);
     setSelectedMonth(month);
     setSelectedDay(day);
-  }, [name, values]);
+  }, [name, values[name]]);
 
   function updateDate(nextParts: Partial<{ year: string; month: string; day: string }>) {
     const nextYear = nextParts.year ?? selectedYear;
@@ -3400,12 +3398,15 @@ function DateOfBirthInput({
     <label className="date-of-birth-field">
       {label}
       <div className="date-of-birth-grid">
-        <select className={error ? "input-invalid" : ""} value={selectedYear} onChange={(event) => updateDate({ year: event.target.value })}>
-          <option value="">Year</option>
-          {Array.from({ length: currentYear - minYear + 1 }, (_, index) => String(currentYear - index)).map((option) => (
-            <option key={option} value={option}>{option}</option>
-          ))}
-        </select>
+        <input
+          className={error ? "input-invalid" : ""}
+          type="text"
+          inputMode="numeric"
+          maxLength={4}
+          placeholder="Year"
+          value={selectedYear}
+          onChange={(event) => updateDate({ year: event.target.value.replace(/[^\d]/g, "").slice(0, 4) })}
+        />
         <select className={error ? "input-invalid" : ""} value={selectedMonth} onChange={(event) => updateDate({ month: event.target.value })}>
           <option value="">Month</option>
           {MONTH_LABELS.map((monthLabel, index) => {

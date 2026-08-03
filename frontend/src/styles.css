@@ -2165,6 +2165,7 @@ td {
   gap: 10px;
 }
 
+.date-of-birth-grid input,
 .date-of-birth-grid select {
   width: 100%;
   border: 1px solid #dbe4ef;
