@@ -126,6 +126,15 @@ type FormKey = "employee" | "employeeEdit" | "customer" | "customerEdit" | "poli
 type AuthScreen = "home" | "login" | "register";
 type PolicyApplicationPayload = Parameters<typeof submitPolicyApplication>[1];
 const WORKSPACE_PREVIEW_LIMIT = 12;
+
+function isReloadNavigation() {
+  const navigationEntries = window.performance.getEntriesByType("navigation");
+  if (navigationEntries.length > 0) {
+    return (navigationEntries[0] as PerformanceNavigationTiming).type === "reload";
+  }
+  return typeof window.performance.navigation !== "undefined" && window.performance.navigation.type === 1;
+}
+
 function getAuthScreenFromHash(): AuthScreen | null {
   const screen = window.location.hash.replace("#/", "");
   if (screen === "home" || screen === "login" || screen === "register") {
@@ -190,6 +199,7 @@ export function App() {
   const hasSyncedHistory = useRef(false);
   const hasLoadedPublicData = useRef(false);
   const workspaceLoadIdRef = useRef(0);
+  const shouldResetToDashboardOnReload = useRef(isReloadNavigation());
 
   const isCustomer = currentUser?.role === "customer";
   const isAdmin = currentUser?.role === "admin";
@@ -416,6 +426,9 @@ export function App() {
           throw new Error("This frontend supports only Admin, Agent, and Customer accounts.");
         }
         setCurrentUser(user);
+        if (shouldResetToDashboardOnReload.current) {
+          setActivePage("dashboard");
+        }
         void loadWorkspace(token, user);
       } catch {
         clearStoredToken();
