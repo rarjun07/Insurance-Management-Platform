@@ -943,6 +943,44 @@ function formatMoney(value: string | number) {
   return `₹${Number(value).toLocaleString("en-IN")}`;
 }
 
+function splitIsoDate(value: string | undefined) {
+  if (!value) {
+    return ["", "", ""] as const;
+  }
+  const [year = "", month = "", day = ""] = value.split("-");
+  return [year, month, day] as const;
+}
+
+function getDaysInMonth(year: number, month: number) {
+  if (!year || !month) {
+    return 31;
+  }
+  return new Date(year, month, 0).getDate();
+}
+
+function clampDay(day: string, maxDay: number) {
+  const parsedDay = Number(day);
+  if (!parsedDay) {
+    return "";
+  }
+  return String(Math.min(parsedDay, maxDay)).padStart(2, "0");
+}
+
+const MONTH_LABELS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
 function formatPlanPremium(plan: InsurancePlan) {
   return `${formatMoney(plan.premium_amount)}/year`;
 }
@@ -3332,20 +3370,60 @@ function DateOfBirthInput({
   error?: string;
 }) {
   const currentYear = new Date().getFullYear();
-  const minDate = `${currentYear - 120}-01-01`;
-  const maxDate = `${currentYear}-12-31`;
+  const minYear = currentYear - 120;
+  const [selectedYear, setSelectedYear] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [selectedDay, setSelectedDay] = useState("");
+  const dayCount = getDaysInMonth(Number(selectedYear), Number(selectedMonth));
+
+  useEffect(() => {
+    const [year = "", month = "", day = ""] = splitIsoDate(values[name]);
+    setSelectedYear(year);
+    setSelectedMonth(month);
+    setSelectedDay(day);
+  }, [name, values[name]]);
+
+  function updateDate(nextParts: Partial<{ year: string; month: string; day: string }>) {
+    const nextYear = nextParts.year ?? selectedYear;
+    const nextMonth = nextParts.month ?? selectedMonth;
+    const nextDay = nextParts.day ?? selectedDay;
+    const maxDay = getDaysInMonth(Number(nextYear), Number(nextMonth));
+    const normalizedDay = clampDay(nextDay, maxDay);
+    setSelectedYear(nextYear);
+    setSelectedMonth(nextMonth);
+    setSelectedDay(normalizedDay);
+    const nextValue = nextYear && nextMonth && normalizedDay ? `${nextYear}-${nextMonth}-${normalizedDay}` : "";
+    setValues({ ...values, [name]: nextValue });
+  }
 
   return (
     <label className="date-of-birth-field">
       {label}
-      <input
-        className={error ? "input-invalid" : ""}
-        type="date"
-        min={minDate}
-        max={maxDate}
-        value={values[name] ?? ""}
-        onChange={(event) => setValues({ ...values, [name]: event.target.value })}
-      />
+      <div className="date-of-birth-grid">
+        <input
+          className={error ? "input-invalid" : ""}
+          type="text"
+          inputMode="numeric"
+          maxLength={4}
+          placeholder="Year"
+          value={selectedYear}
+          onChange={(event) => updateDate({ year: event.target.value.replace(/[^\d]/g, "").slice(0, 4) })}
+        />
+        <select className={error ? "input-invalid" : ""} value={selectedMonth} onChange={(event) => updateDate({ month: event.target.value })}>
+          <option value="">Month</option>
+          {MONTH_LABELS.map((monthLabel, index) => {
+            const option = String(index + 1).padStart(2, "0");
+            return <option key={option} value={option}>{monthLabel}</option>;
+          })}
+        </select>
+        <select className={error ? "input-invalid" : ""} value={selectedDay} onChange={(event) => updateDate({ day: event.target.value })}>
+          <option value="">Day</option>
+          {Array.from({ length: dayCount || 31 }, (_, index) => {
+            const option = String(index + 1).padStart(2, "0");
+            return <option key={option} value={option}>{option}</option>;
+          })}
+        </select>
+      </div>
       {error ? <span className="field-error">{error}</span> : null}
     </label>
   );
