@@ -3358,15 +3358,27 @@ function DateOfBirthInput({
 }) {
   const currentYear = new Date().getFullYear();
   const minYear = currentYear - 120;
-  const [year = "", month = "", day = ""] = splitIsoDate(values[name]);
-  const dayCount = getDaysInMonth(Number(year), Number(month));
+  const [selectedYear, setSelectedYear] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [selectedDay, setSelectedDay] = useState("");
+  const dayCount = getDaysInMonth(Number(selectedYear), Number(selectedMonth));
+
+  useEffect(() => {
+    const [year = "", month = "", day = ""] = splitIsoDate(values[name]);
+    setSelectedYear(year);
+    setSelectedMonth(month);
+    setSelectedDay(day);
+  }, [name, values]);
 
   function updateDate(nextParts: Partial<{ year: string; month: string; day: string }>) {
-    const nextYear = nextParts.year ?? year;
-    const nextMonth = nextParts.month ?? month;
-    const nextDay = nextParts.day ?? day;
+    const nextYear = nextParts.year ?? selectedYear;
+    const nextMonth = nextParts.month ?? selectedMonth;
+    const nextDay = nextParts.day ?? selectedDay;
     const maxDay = getDaysInMonth(Number(nextYear), Number(nextMonth));
     const normalizedDay = clampDay(nextDay, maxDay);
+    setSelectedYear(nextYear);
+    setSelectedMonth(nextMonth);
+    setSelectedDay(normalizedDay);
     const nextValue = nextYear && nextMonth && normalizedDay ? `${nextYear}-${nextMonth}-${normalizedDay}` : "";
     setValues({ ...values, [name]: nextValue });
   }
@@ -3375,25 +3387,25 @@ function DateOfBirthInput({
     <label className="date-of-birth-field">
       {label}
       <div className="date-of-birth-grid">
-        <select className={error ? "input-invalid" : ""} value={day} onChange={(event) => updateDate({ day: event.target.value })}>
-          <option value="">Day</option>
-          {Array.from({ length: dayCount || 31 }, (_, index) => {
-            const option = String(index + 1).padStart(2, "0");
-            return <option key={option} value={option}>{option}</option>;
-          })}
+        <select className={error ? "input-invalid" : ""} value={selectedYear} onChange={(event) => updateDate({ year: event.target.value })}>
+          <option value="">Year</option>
+          {Array.from({ length: currentYear - minYear + 1 }, (_, index) => String(currentYear - index)).map((option) => (
+            <option key={option} value={option}>{option}</option>
+          ))}
         </select>
-        <select className={error ? "input-invalid" : ""} value={month} onChange={(event) => updateDate({ month: event.target.value })}>
+        <select className={error ? "input-invalid" : ""} value={selectedMonth} onChange={(event) => updateDate({ month: event.target.value })}>
           <option value="">Month</option>
           {MONTH_LABELS.map((monthLabel, index) => {
             const option = String(index + 1).padStart(2, "0");
             return <option key={option} value={option}>{monthLabel}</option>;
           })}
         </select>
-        <select className={error ? "input-invalid" : ""} value={year} onChange={(event) => updateDate({ year: event.target.value })}>
-          <option value="">Year</option>
-          {Array.from({ length: currentYear - minYear + 1 }, (_, index) => String(currentYear - index)).map((option) => (
-            <option key={option} value={option}>{option}</option>
-          ))}
+        <select className={error ? "input-invalid" : ""} value={selectedDay} onChange={(event) => updateDate({ day: event.target.value })}>
+          <option value="">Day</option>
+          {Array.from({ length: dayCount || 31 }, (_, index) => {
+            const option = String(index + 1).padStart(2, "0");
+            return <option key={option} value={option}>{option}</option>;
+          })}
         </select>
       </div>
       {error ? <span className="field-error">{error}</span> : null}
