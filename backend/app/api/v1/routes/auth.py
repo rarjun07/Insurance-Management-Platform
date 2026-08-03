@@ -18,7 +18,7 @@ from app.models.customer import Customer
 from app.models.system_setting import SystemSetting
 from app.models.user import User, UserRole
 from app.schemas.profile import ProfileUpdate
-from app.schemas.user import PasswordResetConfirm, PasswordResetRequest, PasswordResetRequestResponse, Token, UserCreate, UserRead
+from app.schemas.user import LoginResponse, PasswordResetConfirm, PasswordResetRequest, PasswordResetRequestResponse, UserCreate, UserRead
 
 router = APIRouter()
 
@@ -198,15 +198,14 @@ def create_customer_user(
     )
     db.add(user)
     db.commit()
-    db.refresh(user)
     return user
 
 
-@router.post("/login", response_model=Token)
+@router.post("/login", response_model=LoginResponse)
 def login_user(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: Annotated[Session, Depends(get_db)],
-) -> Token:
+) -> LoginResponse:
     user = db.query(User).filter(User.email == form_data.username).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
@@ -219,7 +218,7 @@ def login_user(
         subject=user.email,
         claims={"role": user.role.value, "customer_id": user.customer_id},
     )
-    return Token(access_token=access_token)
+    return LoginResponse(access_token=access_token, user=user)
 
 
 @router.post("/forgot-password", response_model=PasswordResetRequestResponse)

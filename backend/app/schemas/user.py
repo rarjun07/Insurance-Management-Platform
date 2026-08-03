@@ -28,6 +28,10 @@ class Token(BaseModel):
     token_type: str = "bearer"
 
 
+class LoginResponse(Token):
+    user: UserRead
+
+
 class TokenPayload(BaseModel):
     sub: str
     role: UserRole

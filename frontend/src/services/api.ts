@@ -72,7 +72,7 @@ export async function login(email: string, password: string) {
   formData.set("username", email);
   formData.set("password", password);
 
-  return apiRequest<{ access_token: string; token_type: string }>("/api/v1/auth/login", {
+  return apiRequest<{ access_token: string; token_type: string; user: AppUser }>("/api/v1/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: formData,

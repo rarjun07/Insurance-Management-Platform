@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   BadgeCheck,
@@ -100,6 +100,14 @@ async function loadAllPages<T>(
   return items;
 }
 
+async function loadPagePreview<T>(
+  loadPage: (skip: number, limit: number) => Promise<PaginatedResponse<T>>,
+  limit: number,
+): Promise<T[]> {
+  const firstPage = await loadPage(0, limit);
+  return firstPage.items;
+}
+
 const pageTitles: Record<PageKey, string> = {
   dashboard: "Dashboard",
   employees: "Employee Management",
@@ -117,6 +125,7 @@ const pageTitles: Record<PageKey, string> = {
 type FormKey = "employee" | "employeeEdit" | "customer" | "customerEdit" | "policy" | "premium" | "claim" | "document" | null;
 type AuthScreen = "home" | "login" | "register";
 type PolicyApplicationPayload = Parameters<typeof submitPolicyApplication>[1];
+const WORKSPACE_PREVIEW_LIMIT = 12;
 function getAuthScreenFromHash(): AuthScreen | null {
   const screen = window.location.hash.replace("#/", "");
   if (screen === "home" || screen === "login" || screen === "register") {
@@ -174,10 +183,13 @@ export function App() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [error, setError] = useState("");
+  const [loginPrefillEmail, setLoginPrefillEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isHydratingWorkspace, setIsHydratingWorkspace] = useState(false);
   const [isBootstrapping, setIsBootstrapping] = useState(() => Boolean(getStoredToken()));
   const hasSyncedHistory = useRef(false);
   const hasLoadedPublicData = useRef(false);
+  const workspaceLoadIdRef = useRef(0);
 
   const isCustomer = currentUser?.role === "customer";
   const isAdmin = currentUser?.role === "admin";
@@ -210,72 +222,186 @@ export function App() {
   }, [currentUser]);
 
   async function loadWorkspace(activeToken: string, user: AppUser) {
-    setIsLoading(true);
+    const loadId = ++workspaceLoadIdRef.current;
     setError("");
-    try {
-      const [policyItems, premiumItems, claimItems, documentItems, applicationItems, planItems] = await Promise.all([
-        loadAllPages((skip, limit) => listPolicies(activeToken, user.role === "customer", skip, limit)),
-        loadAllPages((skip, limit) => listPremiums(activeToken, user.role === "customer", skip, limit)),
-        loadAllPages((skip, limit) => listClaims(activeToken, user.role === "customer", skip, limit)),
-        loadAllPages((skip, limit) => listDocuments(activeToken, user.role === "customer", skip, limit)),
-        loadAllPages((skip, limit) => listApplications(activeToken, user.role === "customer", skip, limit)),
-        listPlans(activeToken, user.role === "admin"),
-      ]);
+    setIsHydratingWorkspace(true);
 
-      setPolicies(policyItems);
-      setPremiums(premiumItems);
-      setClaims(claimItems);
-      setDocuments(documentItems);
-      setApplications(applicationItems);
-      setPlans(planItems);
+    const resetWorkspaceData = () => {
+      setEmployees([]);
+      setCustomers([]);
+      setCustomerProfile(null);
+      setPolicies([]);
+      setExpiringPolicies([]);
+      setPremiums([]);
+      setClaims([]);
+      setDocuments([]);
+      setApplications([]);
+      setSettings([]);
+      setPlans([]);
+      setReport(null);
+      setMonthlyReport([]);
+    };
 
-      if (user.customer_id) {
-        const profile = await getCustomer(activeToken, user.customer_id);
-        setCustomerProfile(profile);
-      } else {
-        setCustomerProfile(null);
+    const applyIfCurrent = (apply: () => void) => {
+      if (workspaceLoadIdRef.current !== loadId) {
+        return false;
       }
+      apply();
+      return true;
+    };
 
-      if (user.role === "admin" || user.role === "agent") {
-        const [customerItems, expiringResponse] = await Promise.all([
-          loadAllPages((skip, limit) => listCustomers(activeToken, search, skip, limit)),
-          listExpiringPolicies(activeToken),
-        ]);
-        setCustomers(customerItems);
-        setExpiringPolicies(expiringResponse.items);
-      } else {
-        setCustomers([]);
-        setExpiringPolicies([]);
-      }
+    if (!user) {
+      return;
+    }
 
-      if (user.role === "admin") {
-        const [employeeItems, settingsResponse] = await Promise.all([
-          loadAllPages((skip, limit) => listEmployees(activeToken, "", skip, limit)),
-          listSettings(activeToken),
-        ]);
-        setEmployees(employeeItems);
-        setSettings(settingsResponse);
-      } else {
-        setEmployees([]);
-        setSettings([]);
-      }
+    if (!user.role) {
+      setIsLoading(false);
+      setIsHydratingWorkspace(false);
+      return;
+    }
 
-      if (user.role === "admin") {
-        const [summary, monthly] = await Promise.all([
+    if (user.role === "admin") {
+      setIsLoading(true);
+      resetWorkspaceData();
+      try {
+        const [summary, monthly, expiringResponse, planItems] = await Promise.all([
           getDashboardReport(activeToken),
           getMonthlyReport(activeToken),
+          listExpiringPolicies(activeToken),
+          listPlans(activeToken, true),
         ]);
-        setReport(summary);
-        setMonthlyReport(monthly);
-      } else {
+
+        if (!applyIfCurrent(() => {
+          setReport(summary);
+          setMonthlyReport(monthly);
+          setExpiringPolicies(expiringResponse.items);
+          setPlans(planItems);
+          setCustomers([]);
+          setEmployees([]);
+          setSettings([]);
+          setPolicies([]);
+          setPremiums([]);
+          setClaims([]);
+          setDocuments([]);
+          setApplications([]);
+        })) {
+          return;
+        }
+      } catch (caughtError) {
+        if (workspaceLoadIdRef.current === loadId) {
+          setError(caughtError instanceof Error ? caughtError.message : "Unable to load workspace");
+        }
+        setIsLoading(false);
+        setIsHydratingWorkspace(false);
+        return;
+      }
+
+      setIsLoading(false);
+      void (async () => {
+        try {
+          const [policyItems, premiumItems, claimItems, documentItems, applicationItems, customerItems, employeeItems, settingsResponse] = await Promise.all([
+            loadAllPages((skip, limit) => listPolicies(activeToken, false, skip, limit)),
+            loadAllPages((skip, limit) => listPremiums(activeToken, false, skip, limit)),
+            loadAllPages((skip, limit) => listClaims(activeToken, false, skip, limit)),
+            loadAllPages((skip, limit) => listDocuments(activeToken, false, skip, limit)),
+            loadAllPages((skip, limit) => listApplications(activeToken, false, skip, limit)),
+            loadAllPages((skip, limit) => listCustomers(activeToken, search, skip, limit)),
+            loadAllPages((skip, limit) => listEmployees(activeToken, "", skip, limit)),
+            listSettings(activeToken),
+          ]);
+
+          startTransition(() => {
+            applyIfCurrent(() => {
+              setPolicies(policyItems);
+              setPremiums(premiumItems);
+              setClaims(claimItems);
+              setDocuments(documentItems);
+              setApplications(applicationItems);
+              setCustomers(customerItems);
+              setEmployees(employeeItems);
+              setSettings(settingsResponse);
+            });
+          });
+        } catch {
+          // Keep the preview data if the background refresh fails.
+        } finally {
+          if (workspaceLoadIdRef.current === loadId) {
+            setIsHydratingWorkspace(false);
+          }
+        }
+      })();
+      return;
+    }
+
+    setIsLoading(true);
+    resetWorkspaceData();
+    try {
+      const [customerProfileSnapshot, policyPreview, premiumPreview, claimPreview, documentPreview, applicationPreview, planItems] = await Promise.all([
+        user.customer_id ? getCustomer(activeToken, user.customer_id) : Promise.resolve(null),
+        loadPagePreview((skip, limit) => listPolicies(activeToken, true, skip, limit), WORKSPACE_PREVIEW_LIMIT),
+        loadPagePreview((skip, limit) => listPremiums(activeToken, true, skip, limit), WORKSPACE_PREVIEW_LIMIT),
+        loadPagePreview((skip, limit) => listClaims(activeToken, true, skip, limit), WORKSPACE_PREVIEW_LIMIT),
+        loadPagePreview((skip, limit) => listDocuments(activeToken, true, skip, limit), WORKSPACE_PREVIEW_LIMIT),
+        loadPagePreview((skip, limit) => listApplications(activeToken, true, skip, limit), WORKSPACE_PREVIEW_LIMIT),
+        listPlans(activeToken, false),
+      ]);
+
+      if (!applyIfCurrent(() => {
+        setCustomerProfile(customerProfileSnapshot);
+        setPolicies(policyPreview);
+        setPremiums(premiumPreview);
+        setClaims(claimPreview);
+        setDocuments(documentPreview);
+        setApplications(applicationPreview);
+        setPlans(planItems);
+        setCustomers([]);
+        setEmployees([]);
+        setSettings([]);
+        setExpiringPolicies([]);
         setReport(null);
         setMonthlyReport([]);
+      })) {
+        return;
       }
     } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : "Unable to load workspace");
-    } finally {
+      if (workspaceLoadIdRef.current === loadId) {
+        setError(caughtError instanceof Error ? caughtError.message : "Unable to load workspace");
+      }
       setIsLoading(false);
+      setIsHydratingWorkspace(false);
+      return;
     }
+
+    setIsLoading(false);
+    void (async () => {
+      try {
+        const [policyItems, premiumItems, claimItems, documentItems, applicationItems, planItems] = await Promise.all([
+          loadAllPages((skip, limit) => listPolicies(activeToken, true, skip, limit)),
+          loadAllPages((skip, limit) => listPremiums(activeToken, true, skip, limit)),
+          loadAllPages((skip, limit) => listClaims(activeToken, true, skip, limit)),
+          loadAllPages((skip, limit) => listDocuments(activeToken, true, skip, limit)),
+          loadAllPages((skip, limit) => listApplications(activeToken, true, skip, limit)),
+          listPlans(activeToken, false),
+        ]);
+
+        startTransition(() => {
+          applyIfCurrent(() => {
+            setPolicies(policyItems);
+            setPremiums(premiumItems);
+            setClaims(claimItems);
+            setDocuments(documentItems);
+            setApplications(applicationItems);
+            setPlans(planItems);
+          });
+        });
+      } catch {
+        // Keep the preview data if the background refresh fails.
+      } finally {
+        if (workspaceLoadIdRef.current === loadId) {
+          setIsHydratingWorkspace(false);
+        }
+      }
+    })();
   }
 
   useEffect(() => {
@@ -381,13 +507,14 @@ export function App() {
     const loginResponse = await login(email, password);
     storeToken(loginResponse.access_token);
     setToken(loginResponse.access_token);
-    const user = await getMe(loginResponse.access_token);
+    const user = loginResponse.user;
     if (!isFrontendSupportedRole(user)) {
       clearStoredToken();
       setToken(null);
       throw new Error("This project supports only Admin, Agent, and Customer login.");
     }
     setCurrentUser(user);
+    setLoginPrefillEmail("");
     setAuthScreen("home");
     void loadWorkspace(loginResponse.access_token, user);
   }
@@ -396,6 +523,7 @@ export function App() {
     setError("");
     try {
       await registerUser(payload);
+      setLoginPrefillEmail(payload.email);
       setAuthScreen("login");
     } catch (caughtError) {
       const message = caughtError instanceof Error ? caughtError.message : "Unable to create account";
@@ -425,6 +553,7 @@ export function App() {
     setSettings([]);
     setPlans([]);
     setReport(null);
+    setLoginPrefillEmail("");
   }
 
   function navigateSafely(page: PageKey) {
@@ -452,6 +581,7 @@ export function App() {
           onBackHome={() => setAuthScreen("home")}
           onGoRegister={() => setAuthScreen("register")}
           onLogin={handleLogin}
+          initialEmail={loginPrefillEmail}
         />
       );
     }
@@ -547,6 +677,7 @@ export function App() {
             setSelectedCustomer(customer);
             setActiveForm("customerEdit");
           }}
+          isHydratingWorkspace={isHydratingWorkspace}
         />
       );
     }
@@ -657,6 +788,7 @@ export function App() {
             await settleClaim(token, claim.id, claim.claim_amount, `SET-${claim.id}-${Date.now()}`);
             await reloadCurrentWorkspace();
           }}
+          isHydratingWorkspace={isHydratingWorkspace}
         />
       );
     }
@@ -1490,6 +1622,7 @@ function CustomersPage({
   onSearch,
   onOpenForm,
   onEdit,
+  isHydratingWorkspace,
 }: {
   customers: Customer[];
   applications: PolicyApplication[];
@@ -1502,6 +1635,7 @@ function CustomersPage({
   onSearch: (value: string) => void;
   onOpenForm: () => void;
   onEdit: (customer: Customer) => void;
+  isHydratingWorkspace: boolean;
 }) {
   const customerPagination = useListPagination(customers, search);
   const [historyCustomer, setHistoryCustomer] = useState<Customer | null>(null);
@@ -1513,6 +1647,7 @@ function CustomersPage({
   return (
     <section className="panel page-panel">
       <Toolbar title="Customers" actionLabel="Add Customer" onAction={onOpenForm} search={search} onSearch={onSearch} />
+      {isHydratingWorkspace ? <div className="app-alert wide-panel">Loading more customer records...</div> : null}
       <div className="history-summary-grid">
         <div><span>Registered Customers</span><strong>{customers.length}</strong></div>
         <div><span>Plan Applications</span><strong>{applications.length}</strong></div>
@@ -2067,6 +2202,7 @@ function ClaimsPage({
   onAssign,
   onVerify,
   onSettle,
+  isHydratingWorkspace,
 }: {
   claims: Claim[];
   agents: Employee[];
@@ -2077,6 +2213,7 @@ function ClaimsPage({
   onAssign: (id: number, agentId: number) => Promise<void>;
   onVerify: (id: number, status: "verified" | "rejected") => Promise<void>;
   onSettle: (claim: Claim) => Promise<void>;
+  isHydratingWorkspace: boolean;
 }) {
   const [statusFilter, setStatusFilter] = useState("all");
   const pendingClaims = claims.filter((claim) => claim.status === "pending");
@@ -2089,6 +2226,7 @@ function ClaimsPage({
     <div className="claims-workspace">
       <section className="panel page-panel">
         <Toolbar title="Claim Management" actionLabel="Submit Claim" onAction={onOpenForm} />
+        {isHydratingWorkspace ? <div className="app-alert wide-panel">Loading more claim history...</div> : null}
         <div className="filter-row">
           <label>
             Claim Status

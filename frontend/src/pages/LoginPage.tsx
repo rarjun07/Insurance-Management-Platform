@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { FileText, Lock, Mail, RotateCw, ShieldCheck, UserRound } from "lucide-react";
+import { FileText, Lock, Mail, ShieldCheck, UserRound } from "lucide-react";
 import { BrandLockup } from "../components/BrandLockup";
 import { requestPasswordReset, resetPassword } from "../services/api";
 
@@ -8,14 +8,12 @@ type LoginPageProps = {
   onBackHome: () => void;
   onGoRegister: () => void;
   onLogin: (email: string, password: string) => Promise<void>;
+  initialEmail?: string;
 };
 
-export function LoginPage({ error, onBackHome, onGoRegister, onLogin }: LoginPageProps) {
-  const [email, setEmail] = useState("");
+export function LoginPage({ error, onBackHome, onGoRegister, onLogin, initialEmail = "" }: LoginPageProps) {
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
-  const [captchaCode, setCaptchaCode] = useState(() => generateCaptcha());
-  const [captcha, setCaptcha] = useState("");
-  const [captchaError, setCaptchaError] = useState("");
   const [resetEmail, setResetEmail] = useState("");
   const [resetPasswordValue, setResetPasswordValue] = useState("");
   const [resetToken, setResetToken] = useState("");
@@ -37,7 +35,6 @@ export function LoginPage({ error, onBackHome, onGoRegister, onLogin }: LoginPag
     const clearSavedBrowserValues = window.setTimeout(() => {
       setEmail("");
       setPassword("");
-      setCaptcha("");
     }, 100);
 
     return () => window.clearTimeout(clearSavedBrowserValues);
@@ -47,15 +44,6 @@ export function LoginPage({ error, onBackHome, onGoRegister, onLogin }: LoginPag
     if (emailError) {
       return;
     }
-
-    if (captcha.trim().toUpperCase() !== captchaCode) {
-      setCaptchaError("Captcha does not match. Please try again.");
-      setCaptchaCode(generateCaptcha());
-      setCaptcha("");
-      return;
-    }
-
-    setCaptchaError("");
     setIsSubmitting(true);
     try {
       await onLogin(email, password);
@@ -181,36 +169,6 @@ export function LoginPage({ error, onBackHome, onGoRegister, onLogin }: LoginPag
                 Forgot password?
               </button>
             </div>
-            <label>
-              <span><ShieldCheck size={16} /> Captcha</span>
-              <div className="captcha-row">
-                <div className="captcha-box" aria-label="Captcha code">
-                  {captchaCode.split("").map((letter, index) => (
-                    <strong key={`${letter}-${index}`}>{letter}</strong>
-                  ))}
-                </div>
-                <button
-                  className="captcha-refresh"
-                  type="button"
-                  onClick={() => {
-                    setCaptchaCode(generateCaptcha());
-                    setCaptcha("");
-                    setCaptchaError("");
-                  }}
-                  aria-label="Refresh captcha"
-                >
-                  <RotateCw size={22} />
-                </button>
-                <input
-                  autoComplete="off"
-                  name="healthinsure-login-captcha"
-                  value={captcha}
-                  onChange={(event) => setCaptcha(event.target.value)}
-                  placeholder="Enter captcha"
-                />
-              </div>
-              {captchaError ? <span className="field-error">{captchaError}</span> : null}
-            </label>
             <button className="prime-submit" onClick={submitLogin} disabled={isSubmitting || Boolean(emailError)}>
               {isSubmitting ? "Logging in..." : "Login"}
             </button>
@@ -272,11 +230,6 @@ export function LoginPage({ error, onBackHome, onGoRegister, onLogin }: LoginPag
       ) : null}
     </main>
   );
-}
-
-function generateCaptcha() {
-  const characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  return Array.from({ length: 5 }, () => characters[Math.floor(Math.random() * characters.length)]).join("");
 }
 
 function AuthHeader({ onBackHome, onGoRegister, mode }: { onBackHome: () => void; onGoRegister: () => void; mode: "login" | "register" }) {
